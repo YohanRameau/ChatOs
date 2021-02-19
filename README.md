@@ -1,2 +1,2 @@
 # ChatOs
-a TCP chat service with private or public connexion between client
+A TCP chat service with private or public connexion between client
