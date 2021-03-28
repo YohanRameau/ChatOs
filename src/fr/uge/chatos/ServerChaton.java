@@ -1,5 +1,7 @@
 package fr.uge.chatos;
 
+import static fr.uge.chatos.packetreader.MessageReader.Message;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
@@ -13,7 +15,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static fr.uge.chatos.MessageReader.Message;
+import fr.uge.chatos.packetreader.MessageReader;
 
 
 public class ServerChaton {

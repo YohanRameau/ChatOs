@@ -1,7 +1,9 @@
-package fr.uge.chatos;
+package fr.uge.chatos.packetreader;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+
+import fr.uge.chatos.packetreader.Reader.ProcessStatus;
 
 public class MessageReader implements Reader<MessageReader.Message> {
     private enum State {DONE, WAITING_LOGIN, WAITING_MSG, ERROR}
@@ -71,26 +73,5 @@ public class MessageReader implements Reader<MessageReader.Message> {
     public void reset() {
         state = State.WAITING_LOGIN;
         message = new Message();
-    }
-
-    /**
-     * Pour tester
-     * @param args
-     */
-    public static void main(String[] args) {
-        var mr = new MessageReader();
-        var bb = ByteBuffer.allocate(1024);
-        var login = "toto";
-        var content = "hello world !";
-        var b = StandardCharsets.UTF_8.encode(login);
-        var b2 = StandardCharsets.UTF_8.encode(content);
-        bb.putInt(b.remaining()).put(b).putInt(b2.remaining()).put(b2);
-
-        var res = mr.process(bb);
-        if (res == ProcessStatus.DONE) {
-            var v = mr.get();
-            System.out.println("Login: " + v.login);
-            System.out.println("Content: " + v.content);
-        }
     }
 }

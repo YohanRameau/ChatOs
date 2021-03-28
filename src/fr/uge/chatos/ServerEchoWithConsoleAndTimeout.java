@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.nonblocking;
+package fr.uge.chatos;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -122,12 +123,34 @@ public class ServerEchoWithConsoleAndTimeout {
 		selector = Selector.open();
 		this.timeout = timeout;
 	}
+	
+	enum CommandType {
+		PUBLIC_MESSAGE, PRIVATE_MESSAGE, CONNEXION_REQUEST
+	}
+	
+	CommandType commandParser( ) {
+		
+		if(cmd.length() < 1) {
+			throw new IllegalArgumentException();
+		}
+		
+		
+		
+		switch(cmd.charAt(0)) {
+			case '@':
+				return CommandType.PRIVATE_MESSAGE;
+			case '/':
+				return CommandType.CONNEXION_REQUEST;
+			default:
+				return CommandType.PUBLIC_MESSAGE;
+		}
+	}
 
 	public void consoleRun() {
 		try {
 			var scan = new Scanner(System.in);
 			while (scan.hasNextLine()) {
-				var cmd = scan.nextLine();
+				var cmd = scan.nextLine();				
 				sendCommand(cmd);
 			}
 		} catch (IOException e) {
@@ -137,6 +160,8 @@ public class ServerEchoWithConsoleAndTimeout {
 		}
 	}
 
+	
+	
 	private void processCommand() throws IOException {
 		if (!queue.isEmpty()) {
 			String command = queue.remove();

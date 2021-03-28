@@ -1,4 +1,4 @@
-package fr.uge.chatos;
+package fr.uge.chatos.packetreader;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -15,43 +15,8 @@ import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
-import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.packetreader.ClientChatDone;
-import fr.uge.chatos.packetreader.MessageReader;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+public class ClientChatDone {
 
-public class Client {
-
-//	private final String name;
-//	private final SocketChannel sc;
-//	private final SocketChannel prv;
-//	private final ByteBuffer read;
-//	private final ByteBuffer write;
-//	private static final int BUFFER_SIZE = 1024;
-//	private static final Charset UTF8 = StandardCharsets.UTF_8;
-//	
-//	public Client(String name) throws IOException {
-//		this.name = Objects.requireNonNull(name);
-//		this.sc = SocketChannel.open();
-//		this.prv = SocketChannel.open();
-//		this.read = ByteBuffer.allocateDirect(BUFFER_SIZE);
-//		this.write = ByteBuffer.allocateDirect(BUFFER_SIZE);
-//		sc.configureBlocking(false);
-//	}
-//	
-//	public void connexion(InetSocketAddress serv, String name) throws IOException {
-//		sc.connect(serv);
-//		BuildPacket.request_co_server(write, name);
-//		
-//	}
-//	
-//	public void close() throws IOException {
-//		sc.close();
-//		prv.close();
-//	}
-	
-	
 	static private class Context {
 
 		final private SelectionKey key;
@@ -59,7 +24,7 @@ public class Client {
 		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 		final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
-		final private PacketReader packetReader = new PacketReader();
+		final private MessageReader messageReader = new MessageReader();
 		private boolean closed = false;
 
 		private Context(SelectionKey key) {
@@ -76,9 +41,11 @@ public class Client {
 		 */
 		private void processIn() {
 			for (;;) {
-				switch(packetReader.getPublicMessage(bbin)) {
+				switch( messageReader.process(bbin)) {
 				case DONE: 
-					Packet pck = packetReader.getPacket();
+					Message msg = messageReader.get();
+					System.out.println(msg.login() + ": " + msg.message());
+					messageReader.reset();
 					break;
 				case REFILL:
 					return;
@@ -200,7 +167,7 @@ public class Client {
 	private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
 	private Context uniqueContext;
 
-	public Client(String login, InetSocketAddress serverAddress) throws IOException {
+	public ClientChatDone(String login, InetSocketAddress serverAddress) throws IOException {
 		this.serverAddress = serverAddress;
 		this.login = login;
 		this.sc = SocketChannel.open();
@@ -312,6 +279,5 @@ public class Client {
 
 	private static void usage() {
 		System.out.println("Usage : ClientChat login hostname port");
-	}	
-	
+	}
 }

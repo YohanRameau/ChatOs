@@ -1,4 +1,4 @@
-package fr.uge.chatos;
+package fr.uge.chatos.packetreader;
 
 import java.nio.ByteBuffer;
 
