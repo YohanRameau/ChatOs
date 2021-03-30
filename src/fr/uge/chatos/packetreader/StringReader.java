@@ -16,12 +16,10 @@ public class StringReader implements Reader<String> {
         if (state == State.DONE || state == State.ERROR) {
             throw new IllegalStateException();
         }
-
         bb.flip();
-        try {
             if (state == State.WAITING_SIZE) {
                 // on vérifie s'il y a un INT
-                if (bb.remaining() + buffer.position() >= Integer.BYTES) {
+                if (bb.remaining() >= Integer.BYTES) {
                     var oldLimit = bb.limit();
                     bb.limit(Integer.BYTES - buffer.position());
                     buffer.put(bb);
@@ -29,17 +27,18 @@ public class StringReader implements Reader<String> {
                     buffer.flip();
                     size = buffer.getInt();
                     if (size > BUFFER_MAX_SIZE || size < 0) {
-                        return ProcessStatus.ERROR;
+                    	bb.compact();
+                    	return ProcessStatus.ERROR;
                     }
                 } else {
                     buffer.put(bb);
+                    buffer.compact();
                     return ProcessStatus.REFILL;
                 }
                 state = State.WAITING_MSG;
                 buffer.compact();
                 buffer.limit(size);
             }
-
             if (bb.remaining() <= buffer.remaining()){
                 buffer.put(bb);
             } else {
@@ -48,17 +47,16 @@ public class StringReader implements Reader<String> {
                 buffer.put(bb);
                 bb.limit(oldLimit);
             }
-        } finally {
-            bb.compact();
-        }
+        
 
         if (size > buffer.position()){
+        	bb.compact();
             return ProcessStatus.REFILL;
         }
         state = State.DONE;
         buffer.flip();
         value = StandardCharsets.UTF_8.decode(buffer).toString();
-
+        bb.compact();
         return ProcessStatus.DONE;
     }
 

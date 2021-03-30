@@ -79,7 +79,7 @@ public class Client {
 				var bb = queue.peek();
 				if (bb.remaining() <= bbout.remaining()) {
 					queue.remove();
-					BuildPacket.public_msg(bbout, "test", "message de test looool");
+					BuildPacket.public_msg(bbout, "OK", "message de test looool");
 				} else {
 					break;
 				}

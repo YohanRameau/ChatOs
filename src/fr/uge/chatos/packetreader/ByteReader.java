@@ -3,41 +3,47 @@ package fr.uge.chatos.packetreader;
 import java.nio.ByteBuffer;
 
 public class ByteReader implements Reader<Byte> {
-    private enum State {DONE, WAITING_CODE, ERROR}
-    private State state = State.WAITING_CODE;
-    private static final int BUFFER_MAX_SIZE = 1024;
-    private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_MAX_SIZE);
-    private Byte value;
+	private enum State {
+		DONE, WAITING_CODE, ERROR
+	}
 
-    @Override
-    public ProcessStatus process(ByteBuffer bb) {
-        if (state == State.DONE || state == State.ERROR) {
-            throw new IllegalStateException();
-        }
-        if (bb.remaining() >= Byte.BYTES) {
-        	value = bb.get();
-        	bb.compact();
-        	state = State.DONE;
-        }
-        else {
-        	return ProcessStatus.REFILL;
-        }
-        return ProcessStatus.DONE;
-    }
+	private State state = State.WAITING_CODE;
+	private static final int BUFFER_MAX_SIZE = 1024;
+	private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_MAX_SIZE);
+	private Byte value;
 
-    @Override
-    public Byte get() {
-    	System.out.println(state);
-        if (state != State.DONE) {
-            throw new IllegalStateException();
-        }
-        return value;
-    }
+	@Override
+	public ProcessStatus process(ByteBuffer bb) {
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
+		bb.flip();
+		try {
+			if (bb.remaining() >= Byte.BYTES) {
+				value = bb.get();
+				state = State.DONE;
+			} else {
+				return ProcessStatus.REFILL;
+			}
+		} finally {
+			bb.compact();
+		}
+		return ProcessStatus.DONE;
+	}
 
-    @Override
-    public void reset() {
-        state = State.WAITING_CODE;
-        buffer.clear();
-        value = -1;
-    }
+	@Override
+	public Byte get() {
+		System.out.println(state);
+		if (state != State.DONE) {
+			throw new IllegalStateException();
+		}
+		return value;
+	}
+
+	@Override
+	public void reset() {
+		state = State.WAITING_CODE;
+		buffer.clear();
+		value = -1;
+	}
 }

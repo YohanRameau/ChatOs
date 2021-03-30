@@ -45,13 +45,19 @@ public class ServerChaton {
          *
          */
         private void processIn() {
-            switch (packetReader.process(bbin)) {
+        	System.out.println("PROCESSIN");
+        	switch (packetReader.process(bbin)) {
+         
                 case DONE:
                     Packet pck = packetReader.getPacket();
+                    packetReader.reset();
+                    System.out.println("D'aCOOOOOL : " + pck.getSender() + pck.getMessage() + pck.getOpCode() + pck.getReceiver());
                     break;
                 case REFILL:
+                	System.out.println("REFILL");
                     return;
                 case ERROR:
+                	System.out.println("ERRRORRR");
                     silentlyClose();
                     return;
             }

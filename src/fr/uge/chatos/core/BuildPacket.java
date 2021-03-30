@@ -105,6 +105,7 @@ public class BuildPacket {
 		bb.put(exp);
 		bb.putInt(msg.remaining());
 		bb.put(msg);
+		System.out.println("CLIENT: " + message);
 	}
 
 	/**
