@@ -1,7 +1,5 @@
 package fr.uge.chatos;
 
-import static fr.uge.chatos.packetreader.MessageReader.Message;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
@@ -16,6 +14,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.uge.chatos.packetreader.MessageReader;
+import fr.uge.chatos.packetreader.Packet;
+import fr.uge.chatos.packetreader.PacketReader;
 
 
 public class ServerChaton {
@@ -25,9 +25,10 @@ public class ServerChaton {
         final private SocketChannel sc;
         final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
         final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-        final private Queue<Message> queue = new LinkedList<>();
+        final private Queue<Packet> queue = new LinkedList<>();
         final private ServerChaton server;
-        private final MessageReader messageReader = new MessageReader();
+        private final PacketReader packetReader = new PacketReader();
+        private final ClientList clientList = new ClientList();
         private boolean closed = false;
 
         private Context(ServerChaton server, SelectionKey key){
@@ -44,10 +45,9 @@ public class ServerChaton {
          *
          */
         private void processIn() {
-            switch (messageReader.process(bbin)) {
+            switch (packetReader.process(bbin)) {
                 case DONE:
-                    Message msg = messageReader.get();
-                    server.broadcast(msg);
+                    Packet pck = packetReader.getPacket();
                     break;
                 case REFILL:
                     return;
@@ -55,7 +55,7 @@ public class ServerChaton {
                     silentlyClose();
                     return;
             }
-            messageReader.reset();
+            packetReader.reset();
         }
 
         /**
@@ -63,7 +63,7 @@ public class ServerChaton {
          *
          * @param msg
          */
-        private void queueMessage(Message msg) {
+        private void queueMessage(Packet msg) {
             queue.add(msg);
             processOut();
             updateInterestOps();
@@ -74,14 +74,7 @@ public class ServerChaton {
          *
          */
         private void processOut() {
-            while (bbout.remaining() >= Integer.BYTES && !queue.isEmpty()) {
-                var value = queue.poll();
-                if (value != null) {
-                    var login = StandardCharsets.UTF_8.encode(value.getLogin());
-                    var content = StandardCharsets.UTF_8.encode(value.getContent());
-                    bbout.putInt(login.remaining()).put(login).putInt(content.remaining()).put(content);
-                }
-            }
+            //TODO
         }
 
         /**
@@ -97,6 +90,8 @@ public class ServerChaton {
 
         private void updateInterestOps() {
             var newInterestOps = 0;
+            System.out.println(bbin);
+            System.out.println(bbout);
             if (!closed && bbin.hasRemaining()) {
                 newInterestOps |= SelectionKey.OP_READ;
             }
@@ -104,6 +99,7 @@ public class ServerChaton {
                 newInterestOps |= SelectionKey.OP_WRITE;
             }
             if (newInterestOps == 0) {
+            	System.out.println("ERREUR KEY");
                 silentlyClose();
                 return;
             }
@@ -130,6 +126,7 @@ public class ServerChaton {
             if (sc.read(bbin) == -1) {
                 closed = true;
             }
+            System.out.println(bbin);
             processIn();
             updateInterestOps();
         }
@@ -228,7 +225,7 @@ public class ServerChaton {
      *
      * @param msg
      */
-    private void broadcast(Message msg) {
+    private void broadcast(Packet msg) {
         for (var key : selector.keys()) {
             var context = (Context) key.attachment();
             if (context == null) {

@@ -6,12 +6,15 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.ArrayList;
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import fr.uge.chatos.packetreader.PacketReader;
 
 public class ServerEchoWithConsoleAndTimeout {
 
@@ -22,9 +25,14 @@ public class ServerEchoWithConsoleAndTimeout {
 		final private ByteBuffer bb = ByteBuffer.allocate(BUFFER_SIZE);
 		private boolean closed = false;
 		private long lastActivity = System.currentTimeMillis();
+		private PacketReader reader;
+		private final ClientList clients;
+		private final PacketReader packetReader = new PacketReader();
+		private final ArrayBlockingQueue<ByteBuffer> broadcast = new ArrayBlockingQueue<ByteBuffer>(BUFFER_SIZE);
 
-		private Context(SelectionKey key) {
+		private Context(SelectionKey key, ClientList clients) {
 			this.key = key;
+			this.clients = clients;
 			this.sc = (SocketChannel) key.channel();
 		}
 		
@@ -64,6 +72,23 @@ public class ServerEchoWithConsoleAndTimeout {
 			key.interestOps(interesOps);
 		}
 
+		
+		private void processIn() {
+            switch (packetReader.process(bb)) {
+                case DONE:
+                    Packet msg = packetReader.get();
+                    server.broadcast(msg);
+                    break;
+                case REFILL:
+                    return;
+                case ERROR:
+                    silentlyClose();
+                    return;
+            }
+            packetReader.reset();
+        }
+		
+		
 		private void silentlyClose() {
 			try {
 				sc.close();
@@ -90,6 +115,7 @@ public class ServerEchoWithConsoleAndTimeout {
 			default:
 				updateLastActivityTime();
 				updateInterestOps();
+				reader.sortPacket(bb, clients);
 				break;
 			}
 		}
@@ -116,6 +142,7 @@ public class ServerEchoWithConsoleAndTimeout {
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final int timeout;
+	private final ClientList clients = new ClientList();
 	
 	public ServerEchoWithConsoleAndTimeout(int port, int timeout) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -127,24 +154,6 @@ public class ServerEchoWithConsoleAndTimeout {
 	enum CommandType {
 		PUBLIC_MESSAGE, PRIVATE_MESSAGE, CONNEXION_REQUEST
 	}
-	
-	CommandType commandParser( ) {
-		
-		if(cmd.length() < 1) {
-			throw new IllegalArgumentException();
-		}
-		
-		
-		
-		switch(cmd.charAt(0)) {
-			case '@':
-				return CommandType.PRIVATE_MESSAGE;
-			case '/':
-				return CommandType.CONNEXION_REQUEST;
-			default:
-				return CommandType.PUBLIC_MESSAGE;
-		}
-	}
 
 	public void consoleRun() {
 		try {
@@ -153,6 +162,7 @@ public class ServerEchoWithConsoleAndTimeout {
 				var cmd = scan.nextLine();				
 				sendCommand(cmd);
 			}
+			scan.close();
 		} catch (IOException e) {
 			logger.info("Error during execution of the command");
 		} finally {
@@ -260,7 +270,7 @@ public class ServerEchoWithConsoleAndTimeout {
 		if (sc != null) {
 			sc.configureBlocking(false);
 			SelectionKey cKey = sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-			cKey.attach(new Context(cKey));
+			cKey.attach(new Context(cKey, clients));
 		}
 	}
 

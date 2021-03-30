@@ -16,42 +16,12 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
 import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.packetreader.ClientChatDone;
 import fr.uge.chatos.packetreader.MessageReader;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
 public class Client {
-
-//	private final String name;
-//	private final SocketChannel sc;
-//	private final SocketChannel prv;
-//	private final ByteBuffer read;
-//	private final ByteBuffer write;
-//	private static final int BUFFER_SIZE = 1024;
-//	private static final Charset UTF8 = StandardCharsets.UTF_8;
-//	
-//	public Client(String name) throws IOException {
-//		this.name = Objects.requireNonNull(name);
-//		this.sc = SocketChannel.open();
-//		this.prv = SocketChannel.open();
-//		this.read = ByteBuffer.allocateDirect(BUFFER_SIZE);
-//		this.write = ByteBuffer.allocateDirect(BUFFER_SIZE);
-//		sc.configureBlocking(false);
-//	}
-//	
-//	public void connexion(InetSocketAddress serv, String name) throws IOException {
-//		sc.connect(serv);
-//		BuildPacket.request_co_server(write, name);
-//		
-//	}
-//	
-//	public void close() throws IOException {
-//		sc.close();
-//		prv.close();
-//	}
-	
-	
+		
 	static private class Context {
 
 		final private SelectionKey key;
@@ -109,7 +79,7 @@ public class Client {
 				var bb = queue.peek();
 				if (bb.remaining() <= bbout.remaining()) {
 					queue.remove();
-					bbout.put(bb);
+					BuildPacket.public_msg(bbout, "test", "message de test looool");
 				} else {
 					break;
 				}
@@ -174,6 +144,7 @@ public class Client {
 		 */
 
 		private void doWrite() throws IOException {
+			//System.out.println("WRITE");
 			bbout.flip();
 			sc.write(bbout);
 			bbout.compact();
@@ -190,7 +161,7 @@ public class Client {
 	}
 
 	static private int BUFFER_SIZE = 10_000;
-	static private Logger logger = Logger.getLogger(ClientChatDone.class.getName());
+	static private Logger logger = Logger.getLogger(Client.class.getName());
 
 	private final SocketChannel sc;
 	private final Selector selector;
@@ -307,7 +278,7 @@ public class Client {
 			usage();
 			return;
 		}
-		new ClientChatDone(args[0], new InetSocketAddress(args[1], Integer.parseInt(args[2]))).launch();
+		new Client(args[0], new InetSocketAddress(args[1], Integer.parseInt(args[2]))).launch();
 	}
 
 	private static void usage() {

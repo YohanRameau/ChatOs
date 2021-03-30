@@ -1,9 +1,6 @@
 package fr.uge.chatos.packetreader;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-
-import fr.uge.chatos.packetreader.Reader.ProcessStatus;
 
 public class MessageReader implements Reader<MessageReader.Message> {
     private enum State {DONE, WAITING_LOGIN, WAITING_MSG, ERROR}
