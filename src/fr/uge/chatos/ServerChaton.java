@@ -27,14 +27,16 @@ public class ServerChaton {
         final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
         final private Queue<Packet> queue = new LinkedList<>();
         final private ServerChaton server;
-        private final PacketReader packetReader = new PacketReader();
-        private final ClientList clientList = new ClientList();
+        private final PacketReader packetReader;
+        private final ClientList clientList;
         private boolean closed = false;
 
-        private Context(ServerChaton server, SelectionKey key){
+        private Context(ServerChaton server, SelectionKey key, ClientList clientList){
             this.key = key;
             this.sc = (SocketChannel) key.channel();
             this.server = server;
+            this.clientList = clientList;
+            this.packetReader =  new PacketReader(clientList);
         }
 
         /**
@@ -51,17 +53,19 @@ public class ServerChaton {
                     Packet pck = packetReader.getPacket();
                     packetReader.reset();
                     clientList.add(pck.getSender(), sc);
-                    System.out.println("D'aCOOOOOL : " + pck.getSender() + pck.getMessage() + pck.getOpCode() + pck.getReceiver());
+                    System.out.println(clientList.toString());
+                    //System.out.println("D'aCOOOOOL : " + pck.getSender() + pck.getMessage() + pck.getOpCode() + pck.getReceiver());
                     break;
                 case REFILL:
                 	System.out.println("REFILL");
                     return;
                 case RETRY:
+                	System.out.println("RETRY");
                 	packetReader.reset();
                 	return;
                 case ERROR:
-                	System.out.println("ERRRORRR");
-                    silentlyClose();
+                	bbout.clear();
+                	closed = true;
                     return;
             }
             packetReader.reset();
@@ -164,11 +168,13 @@ public class ServerChaton {
 
     private final ServerSocketChannel serverSocketChannel;
     private final Selector selector;
+    private final ClientList clientList;
 
     public ServerChaton(int port) throws IOException {
         serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.bind(new InetSocketAddress(port));
         selector = Selector.open();
+        clientList = new ClientList();
     }
 
     public void launch() throws IOException {
@@ -214,7 +220,7 @@ public class ServerChaton {
         if (sc != null) {
             sc.configureBlocking(false);
             var clientKey = sc.register(selector, SelectionKey.OP_READ);
-            clientKey.attach(new Context(this, clientKey));
+            clientKey.attach(new Context(this, clientKey, clientList));
         } else {
             logger.warning("The selector was wrong.");
         }

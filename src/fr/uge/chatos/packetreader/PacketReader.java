@@ -10,30 +10,35 @@ public class PacketReader {
 
 	private final StringReader sr = new StringReader();
 	private final ByteReader br = new ByteReader();
-	private final ClientList clientList = new ClientList();
+	private final ClientList clientList;
 
 	private enum State {
 		DONE, WAITING_BYTE, WAITING_SENDER, WAITING_RECEIVER, WAITING_MSG, ERROR, RETRY
 	}
 
+	public PacketReader(ClientList clientList) {
+		this.clientList = clientList;
+	}
+	
+	public PacketReader() {
+		this.clientList = new ClientList();
+	}
+
 	private State state = State.WAITING_BYTE;
 	private PacketBuilder packetBuilder = new PacketBuilder();
 
-	public void parsePacket(ByteBuffer bb, byte b) {
+	public ProcessStatus parsePacket(ByteBuffer bb, byte b) {
 		switch (b) {
 		case 0:
-			registerClient(bb);
-			break;
+			 return registerClient(bb);
 		case 3:
-			getRequestConnexion(bb);
-			break;
+			 return getRequestConnexion(bb);
 		case 4:
-			getPublicMessage(bb);
-			break;
+			return getPublicMessage(bb);
 		case 5:
-			getPrivateMessage(bb);
-			break;
+			return getPrivateMessage(bb);
 		}
+		return ProcessStatus.ERROR;
 	}
 	
 	public ProcessStatus process(ByteBuffer bb) {
@@ -45,16 +50,14 @@ public class PacketReader {
 				case DONE:
 					var b = br.get();
 					packetBuilder.setOpCode(b);
-					parsePacket(bb, b);
-					state = State.WAITING_SENDER;
-					break;
+					return parsePacket(bb, b);
 				case REFILL:
 					return ProcessStatus.REFILL;
 				case ERROR:
 					state = State.ERROR;
 					return ProcessStatus.ERROR;
 				default:
-					return ProcessStatus.ERROR;
+					return ProcessStatus.DONE;
 				}
 			}
 		} finally {
@@ -176,16 +179,16 @@ public class PacketReader {
 		switch (sr.process(bb)) {
 		case DONE:
 			var sender = sr.get();
+			System.out.println("VERIF SENDER");
 			if (clientList.isPresent(sender)) {
 				System.out.println("Name already taken or client already identified !");
-				state = State.RETRY;
-				return ProcessStatus.RETRY;
-				
+				state = State.ERROR;
+				return ProcessStatus.ERROR;
 			}
 			else {
 				packetBuilder.setSender(sr.get());
-				state = State.WAITING_SENDER;
-				break;
+				state = State.DONE;
+				return ProcessStatus.DONE;
 			}
 		case REFILL:
 			return ProcessStatus.REFILL;
@@ -207,7 +210,7 @@ public class PacketReader {
 		case DONE:
 			System.out.println("PROCESS DONE " + bb );
 			state = State.DONE;
-			break;
+			return ProcessStatus.DONE;
 		case REFILL:
 			System.out.println("PROCESS REFILL " + bb);
 			return ProcessStatus.REFILL;
@@ -218,7 +221,6 @@ public class PacketReader {
 			return ProcessStatus.ERROR;
 
 		}
-		return ProcessStatus.ERROR;
 	}
 	
 	public ProcessStatus getRequestConnexion(ByteBuffer bb) {
