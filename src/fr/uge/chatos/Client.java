@@ -79,7 +79,7 @@ public class Client {
 				var bb = queue.peek();
 				if (bb.remaining() <= bbout.remaining()) {
 					queue.remove();
-					BuildPacket.public_msg(bbout, "OK", "message de test looool");
+					bbout.put(bb);
 				} else {
 					break;
 				}
@@ -144,7 +144,6 @@ public class Client {
 		 */
 
 		private void doWrite() throws IOException {
-			//System.out.println("WRITE");
 			bbout.flip();
 			sc.write(bbout);
 			bbout.compact();
@@ -156,7 +155,9 @@ public class Client {
 			if (!sc.finishConnect()) {
 				return;
 			}
-			key.interestOps(SelectionKey.OP_READ);
+			key.interestOps(SelectionKey.OP_WRITE);
+			BuildPacket.request_co_server(bbout, "Duris");
+			updateInterestOps();
 		}
 	}
 
@@ -234,7 +235,7 @@ public class Client {
 		uniqueContext = new Context(key);
 		key.attach(uniqueContext);
 		sc.connect(serverAddress);
-
+		uniqueContext.processOut();
 		console.start();
 
 		while (!Thread.interrupted()) {
