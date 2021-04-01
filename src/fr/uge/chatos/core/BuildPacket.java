@@ -87,7 +87,6 @@ public class BuildPacket {
 	/**
 	 * Build a packet representing a public message and send on read-mode.
 	 * 
-	 * @param bb      -> ByteBuffer used for sending bytes
 	 * @param sender  -> sender client's nickname
 	 * @param message -> the message to send
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
@@ -113,28 +112,29 @@ public class BuildPacket {
 	/**
 	 * Build a packet representing a private message
 	 * 
-	 * @param bb       -> ByteBuffer used for sending bytes
 	 * @param sender   -> sender client's nickname
 	 * @param receiver -> receiver client's nickname
 	 * @param message  -> the message to send
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
-	public static void private_msg(ByteBuffer bb, String sender, String receiver, String message) {
-		bb.clear();
-		if (bb.remaining() < Byte.BYTES + 3 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE + MAX_MESSAGE_SIZE) {
-			throw new BufferUnderflowException();
-		}
-		;
-		bb.put((byte) PacketTypes.PUBLIC_MSG.ordinal());
+	public static ByteBuffer private_msg(String sender, String receiver, String message) {
 		var exp = UTF8.encode(sender);
 		var dest = UTF8.encode(receiver);
 		var msg = UTF8.encode(message);
+		int bbSize = 3 * Integer.BYTES + exp.remaining() + dest.remaining() + msg.remaining() + Byte.BYTES;
+		if (bbSize > Byte.BYTES + 3 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE + MAX_MESSAGE_SIZE) {
+			throw new BufferUnderflowException();
+		}
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put((byte) PacketTypes.PUBLIC_MSG.ordinal());
 		bb.putInt(exp.remaining());
 		bb.put(exp);
 		bb.putInt(dest.remaining());
 		bb.put(dest);
 		bb.putInt(msg.remaining());
 		bb.put(msg);
+		bb.flip();
+		return bb;
 	}
 
 }

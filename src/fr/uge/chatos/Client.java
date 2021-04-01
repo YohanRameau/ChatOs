@@ -228,12 +228,48 @@ public class Client {
 
 	private void processStandardInput(String msg) throws InterruptedException {
 		commandQueue.add(msg);
+		selector.wakeup();
+	}
+
+	
+	/**
+	 * Send a ByteBuffer corresponding to the public message in the queueMessage to send it on the server.
+	 * @param message
+	 */
+	private void sendPublicMessage(String message) {
+		var bb = BuildPacket.public_msg(login, message);
+		mainContext.queueMessage(bb);
+	}
+	
+	/**
+	 * Send a ByteBuffer corresponding to the private message in the queueMessage to send it on the server..
+	 * @param message
+	 */
+	private void sendPrivateMessage(String input) {
+		String[] tokens = input.split(" ", 2);
+		if(tokens.length != 2) {
+			throw new IllegalStateException("Parsing error: the input have a bad format. @login message for private message");
+		}
+		var bb = BuildPacket.private_msg(login, tokens[0], tokens[1]);
+		mainContext.queueMessage(bb);
+	}
+	
+
+	/**
+	 * Processes the command from commandQueue
+	 * @throws  
+	 */
+	private void processCommands() {
+		if (commandQueue.isEmpty()) {
+			return;
+		}
+		String msg = commandQueue.remove();
 		switch (parseStandardInput(msg)) {
 		case PUBLIC_MESSAGE:
 			sendPublicMessage(msg);
 			break;
 		case PRIVATE_MESSAGE:
-			System.out.println("PRIVATE MESSAGE");
+			sendPrivateMessage(msg);
 			// PRIVATE MESSAGE METHOD
 			break;
 		case PRIVATE_REQUEST:
@@ -241,35 +277,6 @@ public class Client {
 			// PRIVATE REQUEST DEMAND AND GET FILE
 			break;
 		}
-		selector.wakeup();
-	}
-
-	/**/
-	private void sendPublicMessage(String message) {
-		var bb = BuildPacket.public_msg(login, message);
-		mainContext.queueMessage(bb);
-	}
-
-	/**
-	 * Processes the command from commandQueue
-	 */
-	private void processCommands() {
-		if (commandQueue.isEmpty()) {
-			return;
-		}
-		String msg = commandQueue.remove();
-		var loginbb = StandardCharsets.UTF_8.encode(login);
-		var loginbbSize = loginbb.remaining();
-		var msgbb = StandardCharsets.UTF_8.encode(msg);
-		var msgbbSize = msgbb.remaining();
-		int bufferSize = 2 * Integer.BYTES + loginbbSize + msgbbSize;
-		if (bufferSize > 1024) {
-			throw new IllegalStateException("The message is too long");
-		}
-		ByteBuffer bb = ByteBuffer.allocate(bufferSize);
-		bb.putInt(loginbbSize).put(loginbb).putInt(msgbbSize).put(msgbb);
-		bb.flip();
-		mainContext.queueMessage(bb);
 	}
 
 	public void launch() throws IOException {
@@ -278,9 +285,7 @@ public class Client {
 		mainContext = new Context(key);
 		key.attach(mainContext);
 		sc.connect(serverAddress);
-
 		console.start();
-
 		while (!Thread.interrupted()) {
 			try {
 				selector.select(this::treatKey);
