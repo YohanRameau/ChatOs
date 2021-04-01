@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.packetreader.MessageReader;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
@@ -29,6 +30,7 @@ public class Server {
         final private Server server;
         private final PacketReader packetReader = new PacketReader();
         private final ClientList clientList = new ClientList();
+        private Packet pck;
         private boolean closed = false;
 
         private Context(Server server, SelectionKey key){
@@ -45,20 +47,20 @@ public class Server {
          *
          */
         private void processIn() {
-        	System.out.println("PROCESSIN");
         	switch (packetReader.process(bbin)) {
-         
                 case DONE:
-                    Packet pck = packetReader.getPacket();
+                    pck = packetReader.getPacket();
                     packetReader.reset();
-                    System.out.println("D'aCOOOOOL : " + pck.getSender() + pck.getMessage() + pck.getOpCode() + pck.getReceiver());
+                    clientList.add(pck.getSender(), sc);
                     break;
                 case REFILL:
-                	System.out.println("REFILL");
                     return;
+                case RETRY:
+                	packetReader.reset();
+                	return;
                 case ERROR:
-                	System.out.println("ERRRORRR");
-                    silentlyClose();
+                	bbout.clear();
+                	closed = true;
                     return;
             }
             packetReader.reset();
@@ -80,7 +82,24 @@ public class Server {
          *
          */
         private void processOut() {
-            //TODO
+            switch(pck.getOpCode()) {
+	            case 0:
+	            	if (clientList.isPresent(pck.getSender())) {
+	            		BuildPacket.acceptance(bbout);
+	            		break;
+	            	}
+	            	BuildPacket.refusal(bbout);
+	            case 3:
+	            	if (clientList.isPresent(pck.getReceiver())) {
+	            		BuildPacket.acceptance(bbout);
+	            		break;
+	            	}
+	            	BuildPacket.refusal(bbout);
+	            case 4:
+	            	bbout.put(BuildPacket.public_msg(pck.getSender(), pck.getMessage()));
+	            case 5:
+	            	bbout.put(BuildPacket.private_msg(pck.getSender(), pck.getReceiver(), pck.getMessage()));
+            }
         }
 
         /**
@@ -96,8 +115,6 @@ public class Server {
 
         private void updateInterestOps() {
             var newInterestOps = 0;
-            System.out.println(bbin);
-            System.out.println(bbout);
             if (!closed && bbin.hasRemaining()) {
                 newInterestOps |= SelectionKey.OP_READ;
             }
@@ -105,7 +122,6 @@ public class Server {
                 newInterestOps |= SelectionKey.OP_WRITE;
             }
             if (newInterestOps == 0) {
-            	System.out.println("ERREUR KEY");
                 silentlyClose();
                 return;
             }

@@ -12,4 +12,14 @@ public class ClientList {
 		return clients.containsKey(client);
 	}
 	
+	public void add(String client, SocketChannel sc) {
+		clients.putIfAbsent(client, sc);
+	}
+
+	@Override
+	public String toString() {
+		return "ClientList [clients=" + clients + "]";
+	}
+	
+	
 }

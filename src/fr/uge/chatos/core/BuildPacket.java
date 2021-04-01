@@ -95,7 +95,6 @@ public class BuildPacket {
 		var exp = UTF8.encode(sender);
 		var msg = UTF8.encode(message);
 		int bbSize = 2 * Integer.BYTES + exp.remaining() + msg.remaining() + Byte.BYTES;
-		System.out.println("Sender : " + sender + " Message : " + message + " bbsize: " + bbSize);
 		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + MAX_MESSAGE_SIZE + MAX_NICKNAME_SIZE) {
 			throw new IllegalStateException("Message too long to be send on the server.");
 		}

@@ -31,11 +31,14 @@ public class Client {
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 		final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
 		final private PacketReader packetReader = new PacketReader();
+		final private String login;
+		private Packet pck;
 		private boolean closed = false;
 
-		private Context(SelectionKey key) {
+		private Context(SelectionKey key, String login) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
+			this.login = login;
 		}
 
 		/**
@@ -47,11 +50,15 @@ public class Client {
 		 */
 		private void processIn() {
 			for (;;) {
-				switch (packetReader.getPublicMessage(bbin)) {
+				System.out.println("SWITCH");
+				switch (packetReader.process(bbin)) {
 				case DONE:
-					Packet pck = packetReader.getPacket();
+					System.out.println("DONE");
+					pck = packetReader.getPacket();
+					parsePacket();
 					break;
 				case REFILL:
+					System.out.println("REFILL");
 					return;
 				case ERROR:
 					silentlyClose();
@@ -60,6 +67,27 @@ public class Client {
 			}
 		}
 
+		void parsePacket() {
+			System.out.println("OPCODE: "+pck.getOpCode());
+			switch(pck.getOpCode()) {
+            case 1:
+            	System.out.println("Accepted connexion");
+            	break;
+            case 2:
+            	System.out.println("Refused connexion");
+            	break;
+            case 3:
+            	System.out.println(pck.getSender() + " Sent you a private connexion request | Accept or Decline ?");
+            	break;
+            case 4:
+            	System.out.println(pck.getSender() + ": "+pck.getMessage());
+            	break;
+            case 5:
+            	System.out.println(pck.getSender() + " (Private): "+pck.getMessage());
+            	break;
+			}
+		}
+		
 		/**
 		 * Add a message to the message queue, tries to fill bbOut and updateInterestOps
 		 *
@@ -98,6 +126,7 @@ public class Client {
 
 		private void updateInterestOps() {
 			var interesOps = 0;
+			System.out.println(bbin);
 			if (!closed && bbin.hasRemaining()) {
 				interesOps = interesOps | SelectionKey.OP_READ;
 			}
@@ -158,6 +187,8 @@ public class Client {
 				return;
 			}
 			key.interestOps(SelectionKey.OP_READ);
+			BuildPacket.request_co_server(bbout, login);
+			updateInterestOps();
 		}
 	}
 
@@ -282,7 +313,7 @@ public class Client {
 	public void launch() throws IOException {
 		sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_CONNECT);
-		mainContext = new Context(key);
+		mainContext = new Context(key, login);
 		key.attach(mainContext);
 		sc.connect(serverAddress);
 		console.start();
