@@ -18,7 +18,7 @@ import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
 
-public class ServerChaton {
+public class Server {
 
     static private class Context {
         final private SelectionKey key;
@@ -26,12 +26,12 @@ public class ServerChaton {
         final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
         final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
         final private Queue<Packet> queue = new LinkedList<>();
-        final private ServerChaton server;
+        final private Server server;
         private final PacketReader packetReader = new PacketReader();
         private final ClientList clientList = new ClientList();
         private boolean closed = false;
 
-        private Context(ServerChaton server, SelectionKey key){
+        private Context(Server server, SelectionKey key){
             this.key = key;
             this.sc = (SocketChannel) key.channel();
             this.server = server;
@@ -157,12 +157,12 @@ public class ServerChaton {
     }
 
     static private final int BUFFER_SIZE = 1_024;
-    static private final Logger logger = Logger.getLogger(ServerChaton.class.getName());
+    static private final Logger logger = Logger.getLogger(Server.class.getName());
 
     private final ServerSocketChannel serverSocketChannel;
     private final Selector selector;
 
-    public ServerChaton(int port) throws IOException {
+    public Server(int port) throws IOException {
         serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.bind(new InetSocketAddress(port));
         selector = Selector.open();
@@ -246,7 +246,7 @@ public class ServerChaton {
             usage();
             return;
         }
-        new ServerChaton(Integer.parseInt(args[0])).launch();
+        new Server(Integer.parseInt(args[0])).launch();
     }
 
     private static void usage(){

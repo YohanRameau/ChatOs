@@ -10,6 +10,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -21,7 +22,7 @@ import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
 public class Client {
-		
+
 	static private class Context {
 
 		final private SelectionKey key;
@@ -46,8 +47,8 @@ public class Client {
 		 */
 		private void processIn() {
 			for (;;) {
-				switch(packetReader.getPublicMessage(bbin)) {
-				case DONE: 
+				switch (packetReader.getPublicMessage(bbin)) {
+				case DONE:
 					Packet pck = packetReader.getPacket();
 					break;
 				case REFILL:
@@ -79,7 +80,7 @@ public class Client {
 				var bb = queue.peek();
 				if (bb.remaining() <= bbout.remaining()) {
 					queue.remove();
-					BuildPacket.public_msg(bbout, "OK", "message de test looool");
+					bbout.put(bb);
 				} else {
 					break;
 				}
@@ -144,7 +145,7 @@ public class Client {
 		 */
 
 		private void doWrite() throws IOException {
-			//System.out.println("WRITE");
+			// System.out.println("WRITE");
 			bbout.flip();
 			sc.write(bbout);
 			bbout.compact();
@@ -169,7 +170,11 @@ public class Client {
 	private final String login;
 	private final Thread console;
 	private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
-	private Context uniqueContext;
+	private Context mainContext;
+
+	enum MessageType {
+		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE
+	}
 
 	public Client(String login, InetSocketAddress serverAddress) throws IOException {
 		this.serverAddress = serverAddress;
@@ -184,7 +189,7 @@ public class Client {
 			var scan = new Scanner(System.in);
 			while (scan.hasNextLine()) {
 				var msg = scan.nextLine();
-				sendCommand(msg);
+				processStandardInput(msg);
 			}
 		} catch (InterruptedException e) {
 			logger.info("Console thread has been interrupted");
@@ -194,49 +199,93 @@ public class Client {
 	}
 
 	/**
+	 * Parse the standard input to determinate the type of message from the message
+	 * content.
+	 * 
+	 * @param msg
+	 */
+	private MessageType parseStandardInput(String msg) {
+		Objects.requireNonNull(msg);
+		if (msg.length() > 0) {
+			switch (msg.charAt(0)) {
+			case '@':
+				return MessageType.PRIVATE_MESSAGE;
+			case '/':
+				return MessageType.PRIVATE_REQUEST;
+			default:
+				return MessageType.PUBLIC_MESSAGE;
+			}
+		}
+		return MessageType.PUBLIC_MESSAGE;
+	}
+
+	/**
 	 * Send a command to the selector via commandQueue and wake it up
 	 *
 	 * @param msg
 	 * @throws InterruptedException
 	 */
 
-	private void sendCommand(String msg) throws InterruptedException {
+	private void processStandardInput(String msg) throws InterruptedException {
 		commandQueue.add(msg);
 		selector.wakeup();
 	}
 
+	
+	/**
+	 * Send a ByteBuffer corresponding to the public message in the queueMessage to send it on the server.
+	 * @param message
+	 */
+	private void sendPublicMessage(String message) {
+		var bb = BuildPacket.public_msg(login, message);
+		mainContext.queueMessage(bb);
+	}
+	
+	/**
+	 * Send a ByteBuffer corresponding to the private message in the queueMessage to send it on the server..
+	 * @param message
+	 */
+	private void sendPrivateMessage(String input) {
+		String[] tokens = input.split(" ", 2);
+		if(tokens.length != 2) {
+			throw new IllegalStateException("Parsing error: the input have a bad format. @login message for private message");
+		}
+		var bb = BuildPacket.private_msg(login, tokens[0], tokens[1]);
+		mainContext.queueMessage(bb);
+	}
+	
+
 	/**
 	 * Processes the command from commandQueue
+	 * @throws  
 	 */
-
 	private void processCommands() {
 		if (commandQueue.isEmpty()) {
 			return;
 		}
 		String msg = commandQueue.remove();
-		var loginbb = StandardCharsets.UTF_8.encode(login);
-		var loginbbSize = loginbb.remaining();
-		var msgbb = StandardCharsets.UTF_8.encode(msg);
-		var msgbbSize = msgbb.remaining();
-		int bufferSize = 2 * Integer.BYTES + loginbbSize + msgbbSize;
-		if (bufferSize > 1024) {
-			throw new IllegalStateException("The message is too long");
+		switch (parseStandardInput(msg)) {
+		case PUBLIC_MESSAGE:
+			sendPublicMessage(msg);
+			break;
+		case PRIVATE_MESSAGE:
+			sendPrivateMessage(msg);
+			// PRIVATE MESSAGE METHOD
+			break;
+		case PRIVATE_REQUEST:
+			System.out.println("PRIVATE REQUEST");
+			// PRIVATE REQUEST DEMAND AND GET FILE
+			break;
 		}
-		ByteBuffer bb = ByteBuffer.allocate(bufferSize);
-		bb.putInt(loginbbSize).put(loginbb).putInt(msgbbSize).put(msgbb);
-		bb.flip();
-		uniqueContext.queueMessage(bb);
 	}
 
 	public void launch() throws IOException {
 		sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_CONNECT);
-		uniqueContext = new Context(key);
-		key.attach(uniqueContext);
+		mainContext = new Context(key);
+		key.attach(mainContext);
 		sc.connect(serverAddress);
-
 		console.start();
-
 		while (!Thread.interrupted()) {
 			try {
 				selector.select(this::treatKey);
@@ -250,13 +299,13 @@ public class Client {
 	private void treatKey(SelectionKey key) {
 		try {
 			if (key.isValid() && key.isConnectable()) {
-				uniqueContext.doConnect();
+				mainContext.doConnect();
 			}
 			if (key.isValid() && key.isWritable()) {
-				uniqueContext.doWrite();
+				mainContext.doWrite();
 			}
 			if (key.isValid() && key.isReadable()) {
-				uniqueContext.doRead();
+				mainContext.doRead();
 			}
 		} catch (IOException ioe) {
 			// lambda call in select requires to tunnel IOException
@@ -283,6 +332,6 @@ public class Client {
 
 	private static void usage() {
 		System.out.println("Usage : ClientChat login hostname port");
-	}	
-	
+	}
+
 }
