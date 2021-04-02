@@ -5,14 +5,18 @@ import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
@@ -29,7 +33,7 @@ public class Client {
 		final private SocketChannel sc;
 		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-		final private Queue<ByteBuffer> queue = new LinkedList<>(); // buffers read-mode
+		final private Queue<ByteBuffer> queue = new LinkedList<>(); // Mettre des Packet plutot que des bytebuffer dans la queue car plusieurs types de packets.
 		final private PacketReader packetReader = new PacketReader();
 		final private String login;
 		private Packet pck;
@@ -49,18 +53,22 @@ public class Client {
 		 *
 		 */
 		private void processIn() {
+			System.out.println("ProcessIn");
 			for (;;) {
 				System.out.println("SWITCH");
+				System.out.println("BBIN :" + bbin);
 				switch (packetReader.process(bbin)) {
 				case DONE:
-					System.out.println("DONE");
+					System.out.println("DONE PROCESS IN");
 					pck = packetReader.getPacket();
 					parsePacket();
 					break;
 				case REFILL:
 					System.out.println("REFILL");
+					System.out.println("BBIN :" + bbin);
 					return;
 				case ERROR:
+					System.out.println("EROOOOOOOOR");
 					silentlyClose();
 					return;
 				}
@@ -96,6 +104,7 @@ public class Client {
 		private void queueMessage(ByteBuffer bb) {
 			queue.add(bb);
 			processOut();
+			System.out.println("QUEUE BEFORE UPDATE");
 			updateInterestOps();
 		}
 
@@ -125,20 +134,26 @@ public class Client {
 		 */
 
 		private void updateInterestOps() {
+			System.out.println("Update");
 			var interesOps = 0;
-			System.out.println(bbin);
+			System.out.println("bbin :" + bbin);
 			if (!closed && bbin.hasRemaining()) {
+				System.out.println("Read");
 				interesOps = interesOps | SelectionKey.OP_READ;
 			}
 			if (bbout.position() != 0) {
+				System.out.println("Write");
 				interesOps |= SelectionKey.OP_WRITE;
 			}
 			if (interesOps == 0) {
+				System.out.println("Fermeture");
 				silentlyClose();
 				return;
 			}
+			System.out.println("Affect new ops " + (interesOps == SelectionKey.OP_READ));
 			key.interestOps(interesOps);
-		}
+			System.out.println("QUIT UPDATE");
+			}
 
 		private void silentlyClose() {
 			try {
@@ -157,10 +172,12 @@ public class Client {
 		 * @throws IOException
 		 */
 		private void doRead() throws IOException {
+			System.out.println("DO READ");
 			if (sc.read(bbin) == -1) {
 				closed = true;
 			}
 			processIn();
+			System.out.println("DO READ BEFORE UPDATE");
 			updateInterestOps();
 		}
 
@@ -174,11 +191,12 @@ public class Client {
 		 */
 
 		private void doWrite() throws IOException {
-			// System.out.println("WRITE");
+			System.out.println("DO WRITE");
 			bbout.flip();
 			sc.write(bbout);
 			bbout.compact();
 			processOut();
+			System.out.println("DO WRITE BEFORE UPDATE");
 			updateInterestOps();
 		}
 
@@ -186,7 +204,7 @@ public class Client {
 			if (!sc.finishConnect()) {
 				return;
 			}
-			key.interestOps(SelectionKey.OP_READ);
+			key.interestOps(SelectionKey.OP_WRITE);
 			BuildPacket.request_co_server(bbout, login);
 			updateInterestOps();
 		}
@@ -204,7 +222,7 @@ public class Client {
 	private Context mainContext;
 
 	enum MessageType {
-		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE
+		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE, ACCEPT, REFUSAL
 	}
 
 	public Client(String login, InetSocketAddress serverAddress) throws IOException {
@@ -214,6 +232,8 @@ public class Client {
 		this.selector = Selector.open();
 		this.console = new Thread(this::consoleRun);
 	}
+	
+	//////////////////// CONSOLE THREAD ////////////////////
 
 	private void consoleRun() {
 		try {
@@ -229,8 +249,51 @@ public class Client {
 		}
 	}
 
+	
+
 	/**
-	 * Parse the standard input to determinate the type of message from the message
+	 * Send a command to the selector via commandQueue and wake it up
+	 *
+	 * @param msg
+	 * @throws InterruptedException
+	 */
+
+	private void processStandardInput(String msg) throws InterruptedException {
+		commandQueue.add(msg);
+		selector.wakeup();
+	}
+	
+	
+	
+	//////////////////// Main Thread ////////////////////
+
+	
+	/**
+	 * Encode a public message into a ByteBuffer 
+	 * and transfer it on the server context.
+	 * @param message
+	 */
+	private void sendPublicMessage(String message) {
+		var bb = BuildPacket.public_msg(login, message);
+		mainContext.queueMessage(bb);
+	}
+	
+	/**
+	 * Encode a private message into a ByteBuffer 
+	 * and transfer it on the server context
+	 * @param message
+	 */
+	private void sendPrivateMessage(String input) {
+		String[] tokens = input.split(" ", 2);
+		if(tokens.length != 2) {
+			throw new IllegalStateException("Parsing error: the input have a bad format. @login message for private message");
+		}
+		var bb = BuildPacket.private_msg(login, tokens[0], tokens[1]);
+		mainContext.queueMessage(bb);
+	}
+	
+	/**
+	 * Parse an input to determinate the type of packet.
 	 * content.
 	 * 
 	 * @param msg
@@ -249,46 +312,11 @@ public class Client {
 		}
 		return MessageType.PUBLIC_MESSAGE;
 	}
-
-	/**
-	 * Send a command to the selector via commandQueue and wake it up
-	 *
-	 * @param msg
-	 * @throws InterruptedException
-	 */
-
-	private void processStandardInput(String msg) throws InterruptedException {
-		commandQueue.add(msg);
-		selector.wakeup();
-	}
-
-	
-	/**
-	 * Send a ByteBuffer corresponding to the public message in the queueMessage to send it on the server.
-	 * @param message
-	 */
-	private void sendPublicMessage(String message) {
-		var bb = BuildPacket.public_msg(login, message);
-		mainContext.queueMessage(bb);
-	}
-	
-	/**
-	 * Send a ByteBuffer corresponding to the private message in the queueMessage to send it on the server..
-	 * @param message
-	 */
-	private void sendPrivateMessage(String input) {
-		String[] tokens = input.split(" ", 2);
-		if(tokens.length != 2) {
-			throw new IllegalStateException("Parsing error: the input have a bad format. @login message for private message");
-		}
-		var bb = BuildPacket.private_msg(login, tokens[0], tokens[1]);
-		mainContext.queueMessage(bb);
-	}
 	
 
 	/**
-	 * Processes the command from commandQueue
-	 * @throws  
+	 * Determinate and process the command receive on the commandQueue by the Console Thread.
+	 * The command can be a public message, a private message or a private connection request.
 	 */
 	private void processCommands() {
 		if (commandQueue.isEmpty()) {
@@ -318,9 +346,14 @@ public class Client {
 		sc.connect(serverAddress);
 		console.start();
 		while (!Thread.interrupted()) {
+			System.out.println("BEGIN LOOP");
+			printKeys();
 			try {
+				System.out.println("BEFORE SELECT");
 				selector.select(this::treatKey);
+				System.out.println("END SELECT");
 				processCommands();
+				System.out.println("PROCESSCOMMANDS");
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
@@ -328,6 +361,8 @@ public class Client {
 	}
 
 	private void treatKey(SelectionKey key) {
+		System.out.println("BEGIN TREATKEY");
+		printSelectedKey(key);
 		try {
 			if (key.isValid() && key.isConnectable()) {
 				mainContext.doConnect();
@@ -342,8 +377,69 @@ public class Client {
 			// lambda call in select requires to tunnel IOException
 			throw new UncheckedIOException(ioe);
 		}
-	}
+		System.out.println("END TREATKEY");
 
+	}
+	
+	private String interestOpsToString(SelectionKey key){
+        if (!key.isValid()) {
+            return "CANCELLED";
+        }
+        int interestOps = key.interestOps();
+        ArrayList<String> list = new ArrayList<>();
+        if ((interestOps&SelectionKey.OP_ACCEPT)!=0) list.add("OP_ACCEPT");
+        if ((interestOps&SelectionKey.OP_READ)!=0) list.add("OP_READ");
+        if ((interestOps&SelectionKey.OP_WRITE)!=0) list.add("OP_WRITE");
+        return String.join("|",list);
+    }
+	
+	public void printKeys() {
+        Set<SelectionKey> selectionKeySet = selector.keys();
+        if (selectionKeySet.isEmpty()) {
+            System.out.println("The selector contains no key : this should not happen!");
+            return;
+        }
+        System.out.println("The selector contains:");
+        for (SelectionKey key : selectionKeySet){
+            SelectableChannel channel = key.channel();
+            if (channel instanceof ServerSocketChannel) {
+                System.out.println("\tKey for ServerSocketChannel : "+ interestOpsToString(key));
+            } else {
+                SocketChannel sc = (SocketChannel) channel;
+                System.out.println("\tKey for Client "+ remoteAddressToString(sc) +" : "+ interestOpsToString(key));
+            }
+        }
+    }
+
+    private String remoteAddressToString(SocketChannel sc) {
+        try {
+            return sc.getRemoteAddress().toString();
+        } catch (IOException e){
+            return "???";
+        }
+    }
+
+    public void printSelectedKey(SelectionKey key) {
+        SelectableChannel channel = key.channel();
+        if (channel instanceof ServerSocketChannel) {
+            System.out.println("\tServerSocketChannel can perform : " + possibleActionsToString(key));
+        } else {
+            SocketChannel sc = (SocketChannel) channel;
+            System.out.println("\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
+        }
+    }
+
+    private String possibleActionsToString(SelectionKey key) {
+        if (!key.isValid()) {
+            return "CANCELLED";
+        }
+        ArrayList<String> list = new ArrayList<>();
+        if (key.isAcceptable()) list.add("ACCEPT");
+        if (key.isReadable()) list.add("READ");
+        if (key.isWritable()) list.add("WRITE");
+        return String.join(" and ",list);
+    }
+	
 	private void silentlyClose(SelectionKey key) {
 		Channel sc = (Channel) key.channel();
 		try {
@@ -364,5 +460,5 @@ public class Client {
 	private static void usage() {
 		System.out.println("Usage : ClientChat login hostname port");
 	}
-
+	
 }

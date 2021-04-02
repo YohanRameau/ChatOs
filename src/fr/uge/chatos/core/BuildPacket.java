@@ -6,11 +6,70 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import fr.uge.chatos.packetreader.Packet;
+
 public class BuildPacket {
 
 	private static final Charset UTF8 = StandardCharsets.UTF_8;
 	private static final int MAX_NICKNAME_SIZE = 24;
 	private static final int MAX_MESSAGE_SIZE = 512;
+
+	public static ByteBuffer encode(Packet pck) {
+		switch (pck.getOpCode()) {
+		case 1: {
+			var senderBb = UTF8.encode(pck.getSender());
+			int senderBbSize = senderBb.remaining();
+			var bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + senderBbSize);
+			bb.put((byte) 1).putInt(senderBbSize).put(senderBb);
+			bb.flip();
+			return bb;
+		}
+		case 2: {
+			var senderBb = UTF8.encode(pck.getSender());
+			int senderBbSize = senderBb.remaining();
+			//System.out.println("encode " + senderBbSize + " " + pck.getSender());
+			var bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + senderBbSize);
+			bb.put((byte) 2).putInt(senderBbSize).put(senderBb);
+			bb.flip();
+			return bb;
+		}
+		case 3: {
+			var senderBb = UTF8.encode(pck.getSender());
+			int senderBbSize = senderBb.remaining();
+			var receiverBb = UTF8.encode(pck.getReceiver());
+			int receiverBbSize = receiverBb.remaining();
+			var bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + senderBbSize + receiverBbSize);
+			bb.put((byte) 3).putInt(senderBbSize).put(senderBb).putInt(receiverBbSize).put(receiverBb);
+			bb.flip();
+			return bb;
+		}
+		case 4: {
+			var senderBb = UTF8.encode(pck.getSender());
+			int senderBbSize = senderBb.remaining();
+			var messageBb = UTF8.encode(pck.getMessage());
+			int messageBbSize = messageBb.remaining();
+			var bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + senderBbSize + messageBbSize);
+			bb.put((byte) 4).putInt(senderBbSize).put(senderBb).putInt(messageBbSize).put(messageBb);
+			bb.flip();
+			return bb;
+		}
+		case 5: {
+			var senderBb = UTF8.encode(pck.getSender());
+			int senderBbSize = senderBb.remaining();
+			var receiverBb = UTF8.encode(pck.getReceiver());
+			int receiverBbSize = receiverBb.remaining();
+			var messageBb = UTF8.encode(pck.getMessage());
+			int messageBbSize = messageBb.remaining();
+			var bb = ByteBuffer.allocate(Byte.BYTES + 3 * Integer.BYTES + senderBbSize + messageBbSize);
+			bb.put((byte) 5).putInt(senderBbSize).put(senderBb).putInt(receiverBbSize).put(receiverBb).putInt(messageBbSize).put(messageBb);
+			bb.flip();
+			return bb;
+		}
+		default:
+			throw new IllegalStateException("The Opcode " + pck.getOpCode() + " is not defined for ChatOs protocol.");
+		}
+
+	}
 
 	/**
 	 * Build a packet asking for a client->server connection
@@ -91,7 +150,7 @@ public class BuildPacket {
 	 * @param message -> the message to send
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
-	public static ByteBuffer public_msg(String sender, String message) {		
+	public static ByteBuffer public_msg(String sender, String message) {
 		var exp = UTF8.encode(sender);
 		var msg = UTF8.encode(message);
 		int bbSize = 2 * Integer.BYTES + exp.remaining() + msg.remaining() + Byte.BYTES;

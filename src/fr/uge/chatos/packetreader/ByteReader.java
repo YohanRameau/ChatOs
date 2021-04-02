@@ -14,9 +14,11 @@ public class ByteReader implements Reader<Byte> {
 
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
+		System.out.println("Byte process " + state);
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
+		
 		bb.flip();
 		try {
 			if (bb.remaining() >= Byte.BYTES) {

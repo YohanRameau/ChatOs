@@ -6,7 +6,7 @@ public class Packet{
 	private String message;
 	private String receiver = null;
 	
-	static class PacketBuilder {
+	static public class PacketBuilder {
 		private byte   opCode;
 		private String sender;
 		private String message = null;
@@ -21,21 +21,25 @@ public class Packet{
 			this.sender = sender;
 		}
 		
-		public void setOpCode(byte opCode) {
+		public PacketBuilder setOpCode(byte opCode) {
 			this.opCode = opCode;
+			return this;
 		}
 
-		public void setSender(String sender) {
+		public PacketBuilder setSender(String sender) {
 			this.sender = sender;
+			return this;
 		}
 
-		public void setMessage(String message) {
+		public PacketBuilder setMessage(String message) {
 			this.message = message;
+			return this;
 		}
 
 
-		public void setReceiver(String receiver) {
+		public PacketBuilder setReceiver(String receiver) {
 			this.receiver = receiver;
+			return this;
 		}
 
 		
@@ -44,7 +48,7 @@ public class Packet{
 		}
 
 	}
-	public Packet(byte opCode, String sender, String message, String receiver) {
+	private Packet(byte opCode, String sender, String message, String receiver) {
 		if( opCode < 0 ||  opCode > 5|| sender.isEmpty()) {
 			throw new IllegalStateException();
 		}
@@ -65,5 +69,6 @@ public class Packet{
 	public String getReceiver() {
 		return receiver;
 	}
+
 	
 }
