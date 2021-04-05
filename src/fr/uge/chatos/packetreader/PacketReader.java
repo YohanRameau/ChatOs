@@ -10,7 +10,10 @@ public class PacketReader {
 
 	private final StringReader sr = new StringReader();
 	private final ByteReader br = new ByteReader();
+	private State state = State.WAITING_BYTE;
+	private PacketBuilder packetBuilder = new PacketBuilder();
 	private final ClientList clientList;
+	private byte opCode = -1;
 
 	private enum State {
 		DONE, WAITING_BYTE, WAITING_SENDER, WAITING_RECEIVER, WAITING_MSG, ERROR
@@ -24,71 +27,99 @@ public class PacketReader {
 		this.clientList = new ClientList();
 	}
 
-	private State state = State.WAITING_BYTE;
-	private PacketBuilder packetBuilder = new PacketBuilder();
-
 	public ProcessStatus parsePacket(ByteBuffer bb, byte b) {
+		System.out.println("Parse Packet");
 		switch (b) {
 		case 0:
+			state = State.WAITING_SENDER;
 			return registerClient(bb);
 		case 1:
+			state = State.WAITING_SENDER;
 			return getAnswer(bb);
 		case 2:
+			state = State.WAITING_SENDER;
 			return getAnswer(bb);
 		case 3:
+			state = State.WAITING_SENDER;
 			return getRequestConnexion(bb);
 		case 4:
+			state = State.WAITING_SENDER;
 			return getPublicMessage(bb);
 		case 5:
+			state = State.WAITING_SENDER;
 			return getPrivateMessage(bb);
+		default:
+			state = State.ERROR;
+			return ProcessStatus.ERROR;
 		}
-		return ProcessStatus.ERROR;
 	}
 
 	public ProcessStatus process(ByteBuffer bb) {
 		// OPCODE
-		try {
-			if (state == State.WAITING_BYTE) {
-				switch (br.process(bb)) {
-				case DONE:
-					var b = br.get();
-					packetBuilder.setOpCode(b);
-					return parsePacket(bb, b);
-				case REFILL:
-					return ProcessStatus.REFILL;
-				case ERROR:
-					state = State.ERROR;
-					return ProcessStatus.ERROR;
-				default:
-					return ProcessStatus.DONE;
-				}
+
+		if (state == State.WAITING_BYTE) {
+			switch (br.process(bb)) {
+			case DONE:
+				opCode = br.get();
+				System.out.println("Byte : " + opCode);
+				packetBuilder.setOpCode(opCode);
+				break;
+			case REFILL:
+				return ProcessStatus.REFILL;
+			case ERROR:
+				state = State.ERROR;
+				return ProcessStatus.ERROR;
+			default:
+				return ProcessStatus.DONE;
 			}
-		} finally {
 		}
+		return parsePacket(bb, opCode);
+	}
+	
+	private ProcessStatus getString(ByteBuffer bb) {
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
+		switch (sr.process(bb)) {
+		case DONE:
+			packetBuilder.setSender(sr.get());
+			state = State.DONE;
+			break;
+		case REFILL:
+			return ProcessStatus.REFILL;
+		case ERROR:
+			state = State.ERROR;
+			return ProcessStatus.ERROR;
+		}
+
+		if (state != State.DONE) {
+			return ProcessStatus.ERROR;
+		}
+		sr.reset();
 		return ProcessStatus.DONE;
 	}
 
 	public ProcessStatus getAnswer(ByteBuffer bb) {
-		System.out.println("State " + state);
-		br.reset();
-		// OPCODE
-		switch (br.process(bb)) {
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
+		// SENDER
+		switch (sr.process(bb)) {
 		case DONE:
-			byte b = br.get();
-			packetBuilder.setOpCode(b);
-			br.reset();
-			if(b == 1) {
-				return ProcessStatus.DONE;
-			}
-			return ProcessStatus.ERROR;
-			
+			packetBuilder.setSender(sr.get());
+			state = State.DONE;
+			break;
 		case REFILL:
 			return ProcessStatus.REFILL;
-		default:
-			br.reset();
+		case ERROR:
 			state = State.ERROR;
 			return ProcessStatus.ERROR;
 		}
+
+		if (state != State.DONE) {
+			return ProcessStatus.ERROR;
+		}
+		return ProcessStatus.DONE;
 	}
 
 	public ProcessStatus getPrivateMessage(ByteBuffer bb) {
@@ -283,6 +314,7 @@ public class PacketReader {
 		state = State.WAITING_BYTE;
 		sr.reset();
 		br.reset();
+		opCode = -1;
 	}
 
 }

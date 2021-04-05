@@ -62,6 +62,7 @@ public class Client {
 					System.out.println("DONE PROCESS IN");
 					pck = packetReader.getPacket();
 					parsePacket();
+					packetReader.reset();
 					break;
 				case REFILL:
 					System.out.println("REFILL");
@@ -69,7 +70,7 @@ public class Client {
 					return;
 				case ERROR:
 					System.out.println("EROOOOOOOOR");
-					silentlyClose();
+					closed = true;
 					return;
 				}
 			}
@@ -79,10 +80,11 @@ public class Client {
 			System.out.println("OPCODE: "+pck.getOpCode());
 			switch(pck.getOpCode()) {
             case 1:
-            	System.out.println("Accepted connexion");
+            	System.out.println("Accepted connexion " + pck.getSender() );
             	break;
             case 2:
             	System.out.println("Refused connexion");
+            	closed = true;
             	break;
             case 3:
             	System.out.println(pck.getSender() + " Sent you a private connexion request | Accept or Decline ?");
@@ -94,6 +96,7 @@ public class Client {
             	System.out.println(pck.getSender() + " (Private): "+pck.getMessage());
             	break;
 			}
+			
 		}
 		
 		/**
