@@ -80,16 +80,27 @@ public class Client {
             	System.out.println(pck.getSender() + " Sent you a private connexion request | Accept or Decline ?");
             	break;
             case 4:
-            	System.out.println(pck.getSender() + ": "+pck.getMessage());
+            	displayMessage(pck);
             	break;
             case 5:
             	System.out.println("(Private) "+pck.getSender()+": "+pck.getMessage());
             	break;
             case 6:
-            	System.out.println("The user you try to reach doesn't exist");
+            	System.out.println("The user you try to reach doesn't exist !");
             	break;
 			}
 			
+		}
+		
+		void displayMessage(Packet pck) {
+			if (pck.getSender().equals(login)) {
+				System.out.println("Me: "+pck.getMessage());
+				return;
+			}
+			else {
+				System.out.println(pck.getSender() + ": "+pck.getMessage());
+				return;
+			}
 		}
 		
 		/**

@@ -27,5 +27,4 @@ public class ClientList {
 		return "ClientList [clients=" + clients + "]";
 	}
 	
-	
 }

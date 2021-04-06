@@ -332,10 +332,6 @@ public class Server {
 			}
 		}
 		return false;
-		// SEARCH into the map (login, context) if the receiver is present
-		// If is not present, send a packet error (receiver does not exist) packet to
-		// the sender
-		// Also add the packet on the receiver queueMessage via his context.
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
