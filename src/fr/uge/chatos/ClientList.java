@@ -21,6 +21,10 @@ public class ClientList {
 	public void add(String client, SocketChannel sc) {
 		clients.putIfAbsent(client, sc);
 	}
+	
+	public void remove(String client) {
+		clients.remove(client);
+	}
 
 	@Override
 	public String toString() {

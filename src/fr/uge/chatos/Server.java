@@ -80,7 +80,11 @@ public class Server {
 				// Connection refusal
 				break;
 			case 3:
-				// TODO
+				if (!server.unicast(pck)) {
+					var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
+					queueMessage(unknown_user);
+					return;
+				};
 				// Specific connection request
 				break;
 			case 4:
@@ -95,6 +99,11 @@ public class Server {
 				};
 				// private message -> unicast for a specific connected client.
 				break;
+			case 7:
+				//TODO
+			case 8:
+				System.out.println("Refusal packet creation");
+				server.unicast(pck);
 			default:
 				// TODO
 			}
@@ -185,6 +194,7 @@ public class Server {
 
 		private void silentlyClose() {
 			try {
+				clientList.remove(login);
 				sc.close();
 			} catch (IOException e) {
 				// ignore exception
@@ -333,6 +343,8 @@ public class Server {
 		}
 		return false;
 	}
+	
+	//Ajout d'une méthode unicast-like pour envoyer des réponses uniquement aux interessés
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 1) {

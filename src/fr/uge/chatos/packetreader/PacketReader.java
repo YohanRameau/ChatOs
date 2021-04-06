@@ -43,6 +43,8 @@ public class PacketReader {
 			return getPrivateMessage(bb);
 		case 6:
 			return getAnswer(bb);
+		case 8:
+			return getRequestConnexion(bb);
 		default:
 			state = State.ERROR;
 			return ProcessStatus.ERROR;

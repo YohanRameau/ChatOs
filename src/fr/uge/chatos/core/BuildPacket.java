@@ -1,7 +1,5 @@
 package fr.uge.chatos.core;
 
-import java.nio.BufferUnderflowException;
-
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -73,6 +71,15 @@ public class BuildPacket {
 			bb.flip();
 			return bb;
 		}
+		case 8:
+			var senderBb = UTF8.encode(pck.getSender());
+			int senderBbSize = senderBb.remaining();
+			var receiverBb = UTF8.encode(pck.getReceiver());
+			int receiverBbSize = receiverBb.remaining();
+			var bb = ByteBuffer.allocate(Byte.BYTES + 2 * Integer.BYTES + senderBbSize + receiverBbSize);
+			bb.put((byte) 8).putInt(senderBbSize).put(senderBb).putInt(receiverBbSize).put(receiverBb);
+			bb.flip();
+			return bb;
 		default:
 			throw new IllegalStateException("The Opcode " + pck.getOpCode() + " is not defined for ChatOs protocol.");
 		}
@@ -146,7 +153,6 @@ public class BuildPacket {
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
 	public static ByteBuffer request_co_private(String sender, String receiver) {
-		
 		var exp = BuildPacket.encodeString(sender);
 		var rec = BuildPacket.encodeString(receiver);
 		int bbSize = exp.remaining() + rec.remaining() + Byte.BYTES;
@@ -230,4 +236,75 @@ public class BuildPacket {
 		bb.flip();
 		return bb;
 	}
+	
+	public static ByteBuffer accept_co_private(String sender, String receiver) {
+		var exp = BuildPacket.encodeString(sender);
+		var rec = BuildPacket.encodeString(receiver);
+		int bbSize = exp.remaining() + rec.remaining() + Byte.BYTES;
+		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE) {
+			throw new IllegalStateException("Login too long to be send on the server.");
+		}
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put(PacketTypes.ACCEPT_CO_PRIVATE.opCode);
+		bb.put(exp);
+		bb.put(rec);
+		bb.flip();
+		return bb;
+	}
+	
+	public static ByteBuffer refuse_co_private(String sender, String receiver) {
+		var exp = BuildPacket.encodeString(sender);
+		var rec = BuildPacket.encodeString(receiver);
+		int bbSize = exp.remaining() + rec.remaining() + Byte.BYTES;
+		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE) {
+			throw new IllegalStateException("Login too long to be send on the server.");
+		}
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put(PacketTypes.REFUSAL_CO_PRIVATE.opCode);
+		bb.put(exp);
+		bb.put(rec);
+		bb.flip();
+		return bb;
+	}
+	
+	public static ByteBuffer id_private(String sender, String receiver, Long id) {
+		var exp = BuildPacket.encodeString(sender);
+		var rec = BuildPacket.encodeString(receiver);
+		
+		int bbSize =  exp.remaining() + rec.remaining() + Long.BYTES + Byte.BYTES;
+		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE + Long.BYTES) {
+			throw new IllegalStateException("Message or login too long to be send on the server.");
+		}
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put((byte) PacketTypes.ID_PRIVATE.opCode);
+		bb.put(exp);
+		bb.put(rec);
+		bb.putLong(id);
+		bb.flip();
+		return bb;
+	}
+	
+	public static ByteBuffer login_private(Long id) {
+		int bbSize = Long.BYTES + Byte.BYTES;
+		if (bbSize > Byte.BYTES + Long.BYTES) {
+			throw new IllegalStateException("Message or login too long to be send on the server.");
+		}
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put((byte) PacketTypes.LOGIN_PRIVATE.opCode);
+		bb.putLong(id);
+		bb.flip();
+		return bb;
+	}
+	
+	public static ByteBuffer established_private(Long id) {
+		int bbSize = Byte.BYTES;
+		if (bbSize > Byte.BYTES) {
+			throw new IllegalStateException("Message or login too long to be send on the server.");
+		}
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put((byte) PacketTypes.ESTABLISHED_PRIVATE.opCode);
+		bb.flip();
+		return bb;
+	}
+	
 }

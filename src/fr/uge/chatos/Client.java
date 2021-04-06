@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -87,6 +86,12 @@ public class Client {
             	break;
             case 6:
             	System.out.println("The user you try to reach doesn't exist !");
+            	break;
+            case 7:
+            	System.out.println("User "+pck.getSender()+" has accepted the connexion request !");
+            	break;
+            case 8:
+            	System.out.println("User "+pck.getSender()+" has refused the connexion request");
             	break;
 			}
 			
@@ -217,7 +222,7 @@ public class Client {
 	private Context mainContext;
 
 	enum MessageType {
-		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE, ACCEPT, REFUSAL
+		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE, ACCEPT, REFUSE
 	}
 
 	public Client(String login, InetSocketAddress serverAddress) throws IOException {
@@ -287,6 +292,26 @@ public class Client {
 		mainContext.queueMessage(bb);
 	}
 	
+	private void sendPrivateConnexionRequest(String input) {
+		String[] tokens = input.split(" ", 2);
+		if(tokens.length != 2) {
+			throw new IllegalStateException("Parsing error: the input have a bad format. /login message for private connexion request");
+		}
+		var bb = BuildPacket.request_co_private(login, tokens[0]);
+		mainContext.queueMessage(bb);
+	}
+	
+	private void sendPrivateConnexionAcceptance(String input) {
+		var bb = BuildPacket.accept_co_private(login, input);
+		mainContext.queueMessage(bb);
+	}
+	
+	private void sendPrivateConnexionRefusal(String input) {
+		String[] tokens = input.split(" ", 2);
+		var bb = BuildPacket.refuse_co_private(login, tokens[0]);
+		mainContext.queueMessage(bb);
+	}
+	
 	/**
 	 * Parse an input to determinate the type of packet.
 	 * content.
@@ -301,6 +326,19 @@ public class Client {
 				return MessageType.PRIVATE_MESSAGE;
 			case '/':
 				return MessageType.PRIVATE_REQUEST;
+			case '\\':
+				String[] tokens = msg.split(" ", 2);
+				if(tokens.length != 2) {
+					throw new IllegalStateException("Parsing error");
+				}
+				switch(tokens[1]) {
+					case "yes":
+						return MessageType.ACCEPT;
+					case "no":	
+						return MessageType.REFUSE;
+					default:
+						return MessageType.REFUSE;
+				}
 			default:
 				return MessageType.PUBLIC_MESSAGE;
 			}
@@ -323,11 +361,16 @@ public class Client {
 			sendPublicMessage(msg);
 			break;
 		case PRIVATE_MESSAGE:
-			sendPrivateMessage(msg);
-			// PRIVATE MESSAGE METHOD
+			sendPrivateMessage(msg.substring(1));
 			break;
 		case PRIVATE_REQUEST:
-			// PRIVATE REQUEST DEMAND AND GET FILE
+			sendPrivateConnexionRequest(msg.substring(1));
+			break;
+		case ACCEPT:
+			//TODO
+		case REFUSE:
+			System.out.println("Start sendPrivateRefusal");
+			sendPrivateConnexionRefusal(msg.substring(1));
 			break;
 		}
 	}
