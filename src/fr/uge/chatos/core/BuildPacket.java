@@ -60,8 +60,16 @@ public class BuildPacket {
 			int receiverBbSize = receiverBb.remaining();
 			var messageBb = UTF8.encode(pck.getMessage());
 			int messageBbSize = messageBb.remaining();
-			var bb = ByteBuffer.allocate(Byte.BYTES + 3 * Integer.BYTES + senderBbSize + messageBbSize);
+			var bb = ByteBuffer.allocate(Byte.BYTES + 3 * Integer.BYTES + senderBbSize + receiverBbSize + messageBbSize);
 			bb.put((byte) 5).putInt(senderBbSize).put(senderBb).putInt(receiverBbSize).put(receiverBb).putInt(messageBbSize).put(messageBb);
+			bb.flip();
+			return bb;
+		}
+		case 6: {
+			var senderBb = UTF8.encode(pck.getSender());
+			int senderBbSize = senderBb.remaining();
+			var bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + senderBbSize);
+			bb.put((byte) 6).putInt(senderBbSize).put(senderBb);
 			bb.flip();
 			return bb;
 		}
@@ -184,6 +192,7 @@ public class BuildPacket {
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
 	public static ByteBuffer private_msg(String sender, String receiver, String message) {
+
 		var exp = BuildPacket.encodeString(sender);
 		var rec = BuildPacket.encodeString(receiver);
 		var msg = BuildPacket.encodeString(message);
@@ -201,6 +210,24 @@ public class BuildPacket {
 		return bb;
 	}
 	
-	
-	
+  
+	/**
+	 * Build a packet meaning the user doesn't exist
+	 * 
+	 * @param bb -> ByteBuffer used for sending bytes
+	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
+	 */
+	public static ByteBuffer unknown_user(String sender) {
+		var exp = UTF8.encode(sender);
+		int bbSize = Integer.BYTES + exp.remaining() + Byte.BYTES;
+		if (bbSize > Byte.BYTES + Integer.BYTES + MAX_NICKNAME_SIZE) {
+			throw new IllegalStateException("Packet too big to be send on the server.");
+		}
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put((byte) PacketTypes.UNKNOWN_USER.ordinal());
+		bb.putInt(exp.remaining());
+		bb.put(exp);
+		bb.flip();
+		return bb;
+	}
 }

@@ -10,7 +10,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Objects;
@@ -21,7 +20,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
 import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.packetreader.MessageReader;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
@@ -82,13 +80,27 @@ public class Client {
             	System.out.println(pck.getSender() + " Sent you a private connexion request | Accept or Decline ?");
             	break;
             case 4:
-            	System.out.println(pck.getSender() + ": "+pck.getMessage());
+            	displayMessage(pck);
             	break;
             case 5:
-            	System.out.println(pck.getSender() + " (Private): "+pck.getMessage());
+            	System.out.println("(Private) "+pck.getSender()+": "+pck.getMessage());
+            	break;
+            case 6:
+            	System.out.println("The user you try to reach doesn't exist !");
             	break;
 			}
 			
+		}
+		
+		void displayMessage(Packet pck) {
+			if (pck.getSender().equals(login)) {
+				System.out.println("Me: "+pck.getMessage());
+				return;
+			}
+			else {
+				System.out.println(pck.getSender() + ": "+pck.getMessage());
+				return;
+			}
 		}
 		
 		/**
@@ -224,7 +236,7 @@ public class Client {
 			while (scan.hasNextLine()) {
 				var msg = scan.nextLine();
 				processStandardInput(msg);
-			}
+			}scan.close();
 		} catch (InterruptedException e) {
 			logger.info("Console thread has been interrupted");
 		} finally {
@@ -315,7 +327,6 @@ public class Client {
 			// PRIVATE MESSAGE METHOD
 			break;
 		case PRIVATE_REQUEST:
-			System.out.println("PRIVATE REQUEST");
 			// PRIVATE REQUEST DEMAND AND GET FILE
 			break;
 		}
@@ -416,15 +427,6 @@ public class Client {
         return String.join(" and ",list);
     }
 	
-	private void silentlyClose(SelectionKey key) {
-		Channel sc = (Channel) key.channel();
-		try {
-			sc.close();
-		} catch (IOException e) {
-			// ignore exception
-		}
-	}
-
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 3) {
 			usage();

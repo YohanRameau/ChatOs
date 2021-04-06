@@ -41,6 +41,8 @@ public class PacketReader {
 			return getPublicMessage(bb);
 		case 5:
 			return getPrivateMessage(bb);
+		case 6:
+			return getAnswer(bb);
 		default:
 			state = State.ERROR;
 			return ProcessStatus.ERROR;
@@ -113,11 +115,11 @@ public class PacketReader {
 	}
 
 	private ProcessStatus getReceiver(ByteBuffer bb, State successState) {
-		if (state != State.WAITING_SENDER) {
+		if (state != State.WAITING_RECEIVER) {
 			throw new IllegalStateException();
 		}
-		// SENDER
-		switch (getString(bb, State.WAITING_SENDER, successState)) {
+		// RECEIVER
+		switch (getString(bb, State.WAITING_RECEIVER, successState)) {
 		case DONE:
 			packetBuilder.setReceiver(sr.get());
 			sr.reset();
@@ -267,22 +269,6 @@ public class PacketReader {
 		}
 	}
 
-//	private ProcessStatus registerClient(ByteBuffer bb) {
-//		switch (getIdentification(bb)) {
-//		case DONE:
-//			state = State.DONE;
-//			return ProcessStatus.DONE;
-//		case REFILL:
-//			return ProcessStatus.REFILL;
-//		case ERROR:
-//			state = State.ERROR;
-//			return ProcessStatus.ERROR;
-//		default:
-//			return ProcessStatus.ERROR;
-//
-//		}
-//	}
-
 	private ProcessStatus getRequestConnexion(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
@@ -298,37 +284,6 @@ public class PacketReader {
 			return getReceiver(bb, State.DONE);
 		}
 		return ProcessStatus.ERROR;
-
-//		// SENDER
-//		switch (sr.process(bb)) {
-//		case DONE:
-//			packetBuilder.setSender(sr.get());
-//			state = State.WAITING_SENDER;
-//			break;
-//		case REFILL:
-//			return ProcessStatus.REFILL;
-//		case ERROR:
-//			state = State.ERROR;
-//			return ProcessStatus.ERROR;
-//		}
-//
-//		if (state != State.WAITING_RECEIVER) {
-//			return ProcessStatus.ERROR;
-//		}
-//		sr.reset();
-//		// RECEIVER
-//		switch (sr.process(bb)) {
-//		case DONE:
-//			packetBuilder.setReceiver(sr.get());
-//			state = State.WAITING_RECEIVER;
-//			break;
-//		case REFILL:
-//			return ProcessStatus.REFILL;
-//		case ERROR:
-//			state = State.ERROR;
-//			return ProcessStatus.ERROR;
-//		}
-
 		
 	}
 
