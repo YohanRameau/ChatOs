@@ -44,7 +44,6 @@ public class Server {
 		 * @param pck
 		 */
 		private void identificationProcess(String login) {
-			System.out.println("Enter in identificationProcess");
 			if (!accepted) {
 				clientList.add(login, sc);
 				accepted = true;
@@ -54,7 +53,6 @@ public class Server {
 			}
 			var refusal_pck = new Packet.PacketBuilder((byte) 2, login).build();
 			queueMessage(refusal_pck);
-			System.out.println("CLOSED because already ident");
 			closed = true;
 			return;
 		}
@@ -114,12 +112,10 @@ public class Server {
 //                	packetReader.reset();
 //                	return;
 			case ERROR:
-				System.out.println("CLOSED PACKETERROR");
 				closed = true;
 				if(!accepted) {
 					// TODO 
 					// envoyez messsage d'erreur.
-					System.out.println("PAS ACCEPTE");
 				}
 				return;
 			}
@@ -131,7 +127,6 @@ public class Server {
 		 * @param msg
 		 */
 		private void queueMessage(Packet msg) {
-			System.out.println("QueueMessage Content : " + msg.getOpCode() + " " + msg.getSender());
 			queue.add(msg);
 			processOut();
 			updateInterestOps();
@@ -145,13 +140,10 @@ public class Server {
 
 			for (;;) {
 				if (queue.isEmpty()) {
-					System.out.println("EMPTY");
 					return;
 				}
-				System.out.println("Filled");
 				var pck = queue.peek();
 				var bb = BuildPacket.encode(pck);
-				System.out.println("New buildPacket " + bb);
 				// var bb = BuildPacket.public_msg(msg.getSender(), pck.getMessage());
 				if (bbout.remaining() < bb.remaining()) {
 					return;
@@ -172,7 +164,6 @@ public class Server {
 
 		private void updateInterestOps() {
 			var newInterestOps = 0;
-			System.out.println("Update " +  closed);
 			if (!closed && bbin.hasRemaining()) {
 				newInterestOps |= SelectionKey.OP_READ;
 			}
@@ -180,7 +171,6 @@ public class Server {
 				newInterestOps |= SelectionKey.OP_WRITE;
 			}
 			if (newInterestOps == 0) {
-				System.out.println("CLOOOOOOOOOOSE");
 				silentlyClose();
 				return;
 			}
@@ -205,10 +195,8 @@ public class Server {
 		 */
 		private void doRead() throws IOException {
 			if (sc.read(bbin) == -1) {
-				System.out.println("CLOSED BECAUSE CONNECTION CIHAS BEENN CLOSED");
 				closed = true;
 			}
-			System.out.println(bbin);
 			processIn();
 			updateInterestOps();
 		}
@@ -223,8 +211,6 @@ public class Server {
 		 */
 
 		private void doWrite() throws IOException {
-			System.out.println("DO WRITE");
-			System.out.println("BBOUT :" + bbout);
 			bbout.flip();
 			sc.write(bbout);
 			bbout.compact();

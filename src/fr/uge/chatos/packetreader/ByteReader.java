@@ -14,7 +14,6 @@ public class ByteReader implements Reader<Byte> {
 
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("Byte process " + state);
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
@@ -35,7 +34,6 @@ public class ByteReader implements Reader<Byte> {
 
 	@Override
 	public Byte get() {
-		System.out.println(state);
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}

@@ -53,23 +53,16 @@ public class Client {
 		 *
 		 */
 		private void processIn() {
-			System.out.println("ProcessIn");
 			for (;;) {
-				System.out.println("SWITCH");
-				System.out.println("BBIN :" + bbin);
 				switch (packetReader.process(bbin)) {
 				case DONE:
-					System.out.println("DONE PROCESS IN");
 					pck = packetReader.getPacket();
 					parsePacket();
 					packetReader.reset();
 					break;
 				case REFILL:
-					System.out.println("REFILL");
-					System.out.println("BBIN :" + bbin);
 					return;
 				case ERROR:
-					System.out.println("EROOOOOOOOR");
 					closed = true;
 					return;
 				}
@@ -77,7 +70,6 @@ public class Client {
 		}
 
 		void parsePacket() {
-			System.out.println("OPCODE: "+pck.getOpCode());
 			switch(pck.getOpCode()) {
             case 1:
             	System.out.println("Accepted connexion " + pck.getSender() );
@@ -107,7 +99,6 @@ public class Client {
 		private void queueMessage(ByteBuffer bb) {
 			queue.add(bb);
 			processOut();
-			System.out.println("QUEUE BEFORE UPDATE");
 			updateInterestOps();
 		}
 
@@ -137,25 +128,18 @@ public class Client {
 		 */
 
 		private void updateInterestOps() {
-			System.out.println("Update");
 			var interesOps = 0;
-			System.out.println("bbin :" + bbin);
 			if (!closed && bbin.hasRemaining()) {
-				System.out.println("Read");
 				interesOps = interesOps | SelectionKey.OP_READ;
 			}
 			if (bbout.position() != 0) {
-				System.out.println("Write");
 				interesOps |= SelectionKey.OP_WRITE;
 			}
 			if (interesOps == 0) {
-				System.out.println("Fermeture");
 				silentlyClose();
 				return;
 			}
-			System.out.println("Affect new ops " + (interesOps == SelectionKey.OP_READ));
 			key.interestOps(interesOps);
-			System.out.println("QUIT UPDATE");
 			}
 
 		private void silentlyClose() {
@@ -175,12 +159,10 @@ public class Client {
 		 * @throws IOException
 		 */
 		private void doRead() throws IOException {
-			System.out.println("DO READ");
 			if (sc.read(bbin) == -1) {
 				closed = true;
 			}
 			processIn();
-			System.out.println("DO READ BEFORE UPDATE");
 			updateInterestOps();
 		}
 
@@ -194,12 +176,10 @@ public class Client {
 		 */
 
 		private void doWrite() throws IOException {
-			System.out.println("DO WRITE");
 			bbout.flip();
 			sc.write(bbout);
 			bbout.compact();
 			processOut();
-			System.out.println("DO WRITE BEFORE UPDATE");
 			updateInterestOps();
 		}
 
@@ -349,14 +329,10 @@ public class Client {
 		sc.connect(serverAddress);
 		console.start();
 		while (!Thread.interrupted()) {
-			System.out.println("BEGIN LOOP");
-			printKeys();
+//			printKeys();
 			try {
-				System.out.println("BEFORE SELECT");
 				selector.select(this::treatKey);
-				System.out.println("END SELECT");
 				processCommands();
-				System.out.println("PROCESSCOMMANDS");
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
@@ -364,8 +340,7 @@ public class Client {
 	}
 
 	private void treatKey(SelectionKey key) {
-		System.out.println("BEGIN TREATKEY");
-		printSelectedKey(key);
+		//printSelectedKey(key);
 		try {
 			if (key.isValid() && key.isConnectable()) {
 				mainContext.doConnect();
@@ -380,8 +355,6 @@ public class Client {
 			// lambda call in select requires to tunnel IOException
 			throw new UncheckedIOException(ioe);
 		}
-		System.out.println("END TREATKEY");
-
 	}
 	
 	private String interestOpsToString(SelectionKey key){

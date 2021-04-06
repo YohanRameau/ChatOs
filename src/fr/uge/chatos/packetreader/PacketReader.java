@@ -27,26 +27,19 @@ public class PacketReader {
 		this.clientList = new ClientList();
 	}
 
-	public ProcessStatus parsePacket(ByteBuffer bb, byte b) {
-		System.out.println("Parse Packet");
+	private ProcessStatus parsePacket(ByteBuffer bb, byte b) {
 		switch (b) {
 		case 0:
-			state = State.WAITING_SENDER;
-			return registerClient(bb);
+			return getIdentification(bb);
 		case 1:
-			state = State.WAITING_SENDER;
 			return getAnswer(bb);
 		case 2:
-			state = State.WAITING_SENDER;
 			return getAnswer(bb);
 		case 3:
-			state = State.WAITING_SENDER;
 			return getRequestConnexion(bb);
 		case 4:
-			state = State.WAITING_SENDER;
 			return getPublicMessage(bb);
 		case 5:
-			state = State.WAITING_SENDER;
 			return getPrivateMessage(bb);
 		default:
 			state = State.ERROR;
@@ -55,14 +48,14 @@ public class PacketReader {
 	}
 
 	public ProcessStatus process(ByteBuffer bb) {
+		
 		// OPCODE
-
 		if (state == State.WAITING_BYTE) {
 			switch (br.process(bb)) {
 			case DONE:
 				opCode = br.get();
-				System.out.println("Byte : " + opCode);
 				packetBuilder.setOpCode(opCode);
+				state = State.WAITING_SENDER;
 				break;
 			case REFILL:
 				return ProcessStatus.REFILL;
@@ -75,151 +68,178 @@ public class PacketReader {
 		}
 		return parsePacket(bb, opCode);
 	}
-	
-	private ProcessStatus getString(ByteBuffer bb) {
-		if (state == State.DONE || state == State.ERROR) {
+
+//	private State getByte(ByteBuffer bb) {
+//	if (state != State.WAITING_BYTE) {
+//		throw new IllegalStateException();
+//	}
+//	
+//	
+//	
+//	}	
+
+	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
+		if (state != waitingState) {
 			throw new IllegalStateException();
 		}
 		switch (sr.process(bb)) {
 		case DONE:
-			packetBuilder.setSender(sr.get());
-			state = State.DONE;
-			break;
+			state = successState;
+			return ProcessStatus.DONE;
 		case REFILL:
+			state = waitingState;
 			return ProcessStatus.REFILL;
-		case ERROR:
+		default:
 			state = State.ERROR;
 			return ProcessStatus.ERROR;
 		}
-
-		if (state != State.DONE) {
-			return ProcessStatus.ERROR;
-		}
-		sr.reset();
-		return ProcessStatus.DONE;
 	}
 
-	public ProcessStatus getAnswer(ByteBuffer bb) {
-		if (state == State.DONE || state == State.ERROR) {
+	private ProcessStatus getSender(ByteBuffer bb, State successState) {
+		if (state != State.WAITING_SENDER) {
 			throw new IllegalStateException();
 		}
 		// SENDER
-		switch (sr.process(bb)) {
+		switch (getString(bb, State.WAITING_SENDER, successState)) {
 		case DONE:
 			packetBuilder.setSender(sr.get());
-			state = State.DONE;
-			break;
+			sr.reset();
+			return ProcessStatus.DONE;
 		case REFILL:
 			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
+		default:
 			return ProcessStatus.ERROR;
 		}
-
-		if (state != State.DONE) {
-			return ProcessStatus.ERROR;
-		}
-		return ProcessStatus.DONE;
 	}
 
-	public ProcessStatus getPrivateMessage(ByteBuffer bb) {
-		if (state == State.DONE || state == State.ERROR) {
+	private ProcessStatus getReceiver(ByteBuffer bb, State successState) {
+		if (state != State.WAITING_SENDER) {
 			throw new IllegalStateException();
 		}
-
 		// SENDER
-		switch (sr.process(bb)) {
-		case DONE:
-			packetBuilder.setSender(sr.get());
-			state = State.WAITING_SENDER;
-			break;
-		case REFILL:
-			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
-			return ProcessStatus.ERROR;
-		}
-
-		if (state != State.WAITING_RECEIVER) {
-			return ProcessStatus.ERROR;
-		}
-
-		sr.reset();
-		// RECEIVER
-		switch (sr.process(bb)) {
+		switch (getString(bb, State.WAITING_SENDER, successState)) {
 		case DONE:
 			packetBuilder.setReceiver(sr.get());
-			state = State.WAITING_RECEIVER;
-			break;
+			sr.reset();
+			return ProcessStatus.DONE;
 		case REFILL:
 			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
+		default:
 			return ProcessStatus.ERROR;
 		}
-		if (state != State.WAITING_MSG) {
-			return ProcessStatus.ERROR;
-		}
-		sr.reset();
-		// MESSAGE
-		switch (sr.process(bb)) {
-		case DONE:
-			packetBuilder.setMessage(sr.get());
-			state = State.WAITING_MSG;
-			break;
-		case REFILL:
-			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
-			return ProcessStatus.ERROR;
-		}
-
-		return ProcessStatus.DONE;
 	}
 
-	public ProcessStatus getPublicMessage(ByteBuffer bb) {
+	private ProcessStatus getMessage(ByteBuffer bb, State successState) {
+		if (state != State.WAITING_MSG) {
+			throw new IllegalStateException();
+		}
+		// SENDER
+		switch (getString(bb, State.WAITING_MSG, successState)) {
+		case DONE:
+			packetBuilder.setMessage(sr.get());
+			sr.reset();
+			return ProcessStatus.DONE;
+		case REFILL:
+			return ProcessStatus.REFILL;
+		default:
+			return ProcessStatus.ERROR;
+		}
+	}
+
+	private ProcessStatus getAnswer(ByteBuffer bb) {
+		return getSender(bb, State.DONE);
+	}
+
+	private ProcessStatus getPrivateMessage(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
-		try {
-			// SENDER
-			switch (sr.process(bb)) {
-			case DONE:
-				packetBuilder.setSender(sr.get());
-				sr.reset();
-				state = State.WAITING_MSG;
-				break;
-			case REFILL:
-				return ProcessStatus.REFILL;
-			case ERROR:
-				state = State.ERROR;
-				return ProcessStatus.ERROR;
-			}
 
-			if (state != State.WAITING_MSG) {
-				return ProcessStatus.ERROR;
-			}
-
-			// MESSAGE
-			switch (sr.process(bb)) {
-			case DONE:
-				packetBuilder.setMessage(sr.get());
-				sr.reset();
-				state = State.WAITING_MSG;
-				break;
-			case REFILL:
-				return ProcessStatus.REFILL;
-			case ERROR:
-				state = State.ERROR;
-				return ProcessStatus.ERROR;
-			}
-		} finally {
+		// SENDER
+		if (state == State.WAITING_SENDER) {
+			getSender(bb, State.WAITING_RECEIVER);
 		}
 
-		return ProcessStatus.DONE;
+		// RECEIVER
+		if (state == State.WAITING_RECEIVER) {
+			getReceiver(bb, State.WAITING_MSG);
+		}
+
+		// MESSAGE
+		if (state == State.WAITING_MSG) {
+			return getMessage(bb, State.DONE);
+		}
+
+		return ProcessStatus.ERROR;
+
+//		// SENDER
+//		switch (sr.process(bb)) {
+//		case DONE:
+//			packetBuilder.setSender(sr.get());
+//			state = State.WAITING_SENDER;
+//			break;
+//		case REFILL:
+//			return ProcessStatus.REFILL;
+//		case ERROR:
+//			state = State.ERROR;
+//			return ProcessStatus.ERROR;
+//		}
+//
+//		if (state != State.WAITING_RECEIVER) {
+//			return ProcessStatus.ERROR;
+//		}
+//		sr.reset();
+//		// RECEIVER
+//		switch (sr.process(bb)) {
+//		case DONE:
+//			packetBuilder.setReceiver(sr.get());
+//			state = State.WAITING_RECEIVER;
+//			break;
+//		case REFILL:
+//			return ProcessStatus.REFILL;
+//		case ERROR:
+//			state = State.ERROR;
+//			return ProcessStatus.ERROR;
+//		}
+//		if (state != State.WAITING_MSG) {
+//			return ProcessStatus.ERROR;
+//		}
+//		sr.reset();
+//		// MESSAGE
+//		switch (sr.process(bb)) {
+//		case DONE:
+//			packetBuilder.setMessage(sr.get());
+//			state = State.WAITING_MSG;
+//			break;
+//		case REFILL:
+//			return ProcessStatus.REFILL;
+//		case ERROR:
+//			state = State.ERROR;
+//			return ProcessStatus.ERROR;
+//		}
+//
+//		return ProcessStatus.DONE;
 	}
 
-	public ProcessStatus getIdentification(ByteBuffer bb) {
+	private ProcessStatus getPublicMessage(ByteBuffer bb) {
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
+		// SENDER
+		if (state == State.WAITING_SENDER) {
+			getSender(bb, State.WAITING_MSG);
+		}
+
+		// MESSAGE
+		if (state == State.WAITING_MSG) {
+			return getMessage(bb, State.DONE);
+		}
+
+		return ProcessStatus.ERROR;
+
+	}
+
+	private ProcessStatus getIdentification(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
@@ -227,83 +247,89 @@ public class PacketReader {
 		// SENDER
 		switch (sr.process(bb)) {
 		case DONE:
-			var sender = sr.get();
+			var sender = sr.get();		
 			if (clientList.isPresent(sender)) {
 				System.out.println("Name already taken or client already identified !");
+				sr.reset();
 				state = State.ERROR;
 				return ProcessStatus.ERROR;
 			} else {
-				packetBuilder.setSender(sr.get());
+				packetBuilder.setSender(sender);
+				sr.reset();
 				state = State.DONE;
 				return ProcessStatus.DONE;
 			}
 		case REFILL:
 			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
-			return ProcessStatus.ERROR;
-		}
-
-		if (state != State.WAITING_RECEIVER) {
-			return ProcessStatus.ERROR;
-		}
-		sr.reset();
-		state = State.DONE;
-		return ProcessStatus.DONE;
-	}
-
-	public ProcessStatus registerClient(ByteBuffer bb) {
-		switch (getIdentification(bb)) {
-		case DONE:
-			state = State.DONE;
-			return ProcessStatus.DONE;
-		case REFILL:
-			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
-			return ProcessStatus.ERROR;
 		default:
+			state = State.ERROR;
 			return ProcessStatus.ERROR;
-
 		}
 	}
 
-	public ProcessStatus getRequestConnexion(ByteBuffer bb) {
+//	private ProcessStatus registerClient(ByteBuffer bb) {
+//		switch (getIdentification(bb)) {
+//		case DONE:
+//			state = State.DONE;
+//			return ProcessStatus.DONE;
+//		case REFILL:
+//			return ProcessStatus.REFILL;
+//		case ERROR:
+//			state = State.ERROR;
+//			return ProcessStatus.ERROR;
+//		default:
+//			return ProcessStatus.ERROR;
+//
+//		}
+//	}
+
+	private ProcessStatus getRequestConnexion(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
 
 		// SENDER
-		switch (sr.process(bb)) {
-		case DONE:
-			packetBuilder.setSender(sr.get());
-			state = State.WAITING_SENDER;
-			break;
-		case REFILL:
-			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
-			return ProcessStatus.ERROR;
+		if (state == State.WAITING_SENDER) {
+			getSender(bb, State.WAITING_RECEIVER);
 		}
 
-		if (state != State.WAITING_RECEIVER) {
-			return ProcessStatus.ERROR;
-		}
-		sr.reset();
 		// RECEIVER
-		switch (sr.process(bb)) {
-		case DONE:
-			packetBuilder.setReceiver(sr.get());
-			state = State.WAITING_RECEIVER;
-			break;
-		case REFILL:
-			return ProcessStatus.REFILL;
-		case ERROR:
-			state = State.ERROR;
-			return ProcessStatus.ERROR;
+		if (state == State.WAITING_RECEIVER) {
+			return getReceiver(bb, State.DONE);
 		}
+		return ProcessStatus.ERROR;
 
-		return ProcessStatus.DONE;
+//		// SENDER
+//		switch (sr.process(bb)) {
+//		case DONE:
+//			packetBuilder.setSender(sr.get());
+//			state = State.WAITING_SENDER;
+//			break;
+//		case REFILL:
+//			return ProcessStatus.REFILL;
+//		case ERROR:
+//			state = State.ERROR;
+//			return ProcessStatus.ERROR;
+//		}
+//
+//		if (state != State.WAITING_RECEIVER) {
+//			return ProcessStatus.ERROR;
+//		}
+//		sr.reset();
+//		// RECEIVER
+//		switch (sr.process(bb)) {
+//		case DONE:
+//			packetBuilder.setReceiver(sr.get());
+//			state = State.WAITING_RECEIVER;
+//			break;
+//		case REFILL:
+//			return ProcessStatus.REFILL;
+//		case ERROR:
+//			state = State.ERROR;
+//			return ProcessStatus.ERROR;
+//		}
+
+		
 	}
 
 	public Packet getPacket() {
