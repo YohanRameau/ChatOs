@@ -113,11 +113,11 @@ public class PacketReader {
 	}
 
 	private ProcessStatus getReceiver(ByteBuffer bb, State successState) {
-		if (state != State.WAITING_SENDER) {
+		if (state != State.WAITING_RECEIVER) {
 			throw new IllegalStateException();
 		}
-		// SENDER
-		switch (getString(bb, State.WAITING_SENDER, successState)) {
+		// RECEIVER
+		switch (getString(bb, State.WAITING_RECEIVER, successState)) {
 		case DONE:
 			packetBuilder.setReceiver(sr.get());
 			sr.reset();

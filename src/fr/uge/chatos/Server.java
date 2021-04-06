@@ -26,14 +26,16 @@ public class Server {
 		final private Queue<Packet> queue = new LinkedList<>();
 		final private Server server;
 		private final PacketReader packetReader = new PacketReader();
-		private final ClientList clientList = new ClientList();
+		private final ClientList clientList;
 		private boolean closed = false;
 		private boolean accepted = false;
+		private String login;
 
-		private Context(Server server, SelectionKey key) {
+		private Context(Server server, SelectionKey key, ClientList clientlist) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
 			this.server = server;
+			this.clientList = clientlist;
 		}
 
 		/**
@@ -44,9 +46,10 @@ public class Server {
 		 * @param pck
 		 */
 		private void identificationProcess(String login) {
-			if (!accepted) {
+			if (!accepted && !clientList.isPresent(login)) {
 				clientList.add(login, sc);
 				accepted = true;
+				this.login = login;
 				var acceptance_pck = new Packet.PacketBuilder((byte) 1, login).build();
 				queueMessage(acceptance_pck);
 				return;
@@ -85,7 +88,11 @@ public class Server {
 				// public message -> broadcast into all connected client contextqueue
 				break;
 			case 5:
-				// TODO
+				if (!server.unicast(pck)) {
+					var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
+					queueMessage(unknown_user);
+					return;
+				};
 				// private message -> unicast for a specific connected client.
 				break;
 			default:
@@ -144,7 +151,6 @@ public class Server {
 				}
 				var pck = queue.peek();
 				var bb = BuildPacket.encode(pck);
-				// var bb = BuildPacket.public_msg(msg.getSender(), pck.getMessage());
 				if (bbout.remaining() < bb.remaining()) {
 					return;
 				}
@@ -225,6 +231,7 @@ public class Server {
 
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
+	private final ClientList clientList = new ClientList();
 
 	public Server(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -236,14 +243,12 @@ public class Server {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		while (!Thread.interrupted()) {
-			printKeys(); // for debug
-			System.out.println("Starting select");
+			//printKeys(); // for debug
 			try {
 				selector.select(this::treatKey);
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
-			System.out.println("Select finished");
 		}
 	}
 
@@ -279,7 +284,7 @@ public class Server {
 		if (sc != null) {
 			sc.configureBlocking(false);
 			var clientKey = sc.register(selector, SelectionKey.OP_READ);
-			clientKey.attach(new Context(this, clientKey));
+			clientKey.attach(new Context(this, clientKey, clientList));
 		} else {
 			logger.warning("The selector was wrong.");
 		}
@@ -314,8 +319,19 @@ public class Server {
 	 *
 	 * @param msg
 	 */
-	private void unicast(Packet packet) {
-		// TODO
+	private boolean unicast(Packet packet) {
+		if (clientList.isPresent(packet.getReceiver())) {
+			for (var key : selector.keys()) {
+				var context = (Context) key.attachment();
+				if (context == null)
+					continue;
+				if (context.login.equals(packet.getReceiver())) {
+					context.queueMessage(packet);
+					return true;
+				}
+			}
+		}
+		return false;
 		// SEARCH into the map (login, context) if the receiver is present
 		// If is not present, send a packet error (receiver does not exist) packet to
 		// the sender

@@ -49,7 +49,7 @@ public class Packet{
 
 	}
 	private Packet(byte opCode, String sender, String message, String receiver) {
-		if( opCode < 0 ||  opCode > 5|| sender.isEmpty()) {
+		if( opCode < 0 ||  opCode > 6 || sender.isEmpty()) {
 			throw new IllegalStateException();
 		}
 		this.opCode = opCode;

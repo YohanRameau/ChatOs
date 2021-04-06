@@ -9,7 +9,13 @@ public class ClientList {
 	private final Map<String, SocketChannel> clients = new HashMap<String, SocketChannel>();
 	
 	public boolean isPresent(String client) {
-		return clients.containsKey(client);
+		for (String keys : clients.keySet())
+		{
+			if(keys.equals(client)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	public void add(String client, SocketChannel sc) {
