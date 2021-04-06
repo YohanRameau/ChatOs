@@ -78,6 +78,18 @@ public class BuildPacket {
 		}
 
 	}
+	
+	
+	private static ByteBuffer encodeString(String string) {
+		
+		var stringBb = UTF8.encode(string);
+		int senderBbSize = stringBb.remaining();
+		var bb = ByteBuffer.allocate(Integer.BYTES + senderBbSize);
+		bb.putInt(senderBbSize);
+		bb.put(stringBb);
+		bb.flip();
+		return bb;
+	}
 
 	/**
 	 * Build a packet asking for a client->server connection
@@ -86,16 +98,17 @@ public class BuildPacket {
 	 * @param name -> client's nickname
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
-	public static void request_co_server(ByteBuffer bb, String name) {
-		bb.clear();
-		if (bb.remaining() < Byte.BYTES + Integer.BYTES + MAX_NICKNAME_SIZE) {
-			throw new BufferUnderflowException();
+	public static ByteBuffer request_co_server(String name) {
+		
+		var nicknameBuffer = encodeString(name);
+		if (nicknameBuffer.remaining() > Integer.BYTES + MAX_NICKNAME_SIZE) {
+			throw new IllegalStateException("Nickname too long to be send on the server.");
 		}
-		;
-		bb.put((byte) PacketTypes.REQUEST_CO_SERVER.ordinal());
-		var nickname = UTF8.encode(name);
-		bb.putInt(nickname.remaining());
-		bb.put(nickname);
+		var bb = ByteBuffer.allocate(nicknameBuffer.remaining() + Byte.BYTES);
+		bb.put((byte) PacketTypes.REQUEST_CO_SERVER.opCode);
+		bb.put(nicknameBuffer);
+		bb.flip();
+		return bb;
 	}
 
 	/**
@@ -104,13 +117,11 @@ public class BuildPacket {
 	 * @param bb -> ByteBuffer used for sending bytes
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
-	public static void acceptance(ByteBuffer bb) {
-		bb.clear();
-		if (bb.remaining() < Byte.BYTES) {
-			throw new BufferUnderflowException();
-		}
-		;
-		bb.put((byte) PacketTypes.ACCEPTANCE.ordinal());
+	public static ByteBuffer acceptance(String name) {
+		ByteBuffer bb = ByteBuffer.allocate(1);
+		bb.put((byte) PacketTypes.ACCEPTANCE.opCode);		
+		bb.flip();
+		return bb;
 	}
 
 	/**
@@ -119,13 +130,11 @@ public class BuildPacket {
 	 * @param bb -> ByteBuffer used for sending bytes
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
-	public static void refusal(ByteBuffer bb) {
-		bb.clear();
-		if (bb.remaining() < Byte.BYTES) {
-			throw new BufferUnderflowException();
-		}
-		;
-		bb.put((byte) PacketTypes.REFUSAL.ordinal());
+	public static ByteBuffer refusal() {
+		ByteBuffer bb = ByteBuffer.allocate(1);
+		bb.put((byte) PacketTypes.REFUSAL.opCode);
+		bb.flip();
+		return bb;
 	}
 
 	/**
@@ -136,19 +145,20 @@ public class BuildPacket {
 	 * @param receiver -> receiver client's nickname
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
-	public static void request_co_user(ByteBuffer bb, String sender, String receiver) {
-		bb.clear();
-		if (bb.remaining() < Byte.BYTES + 2 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE) {
-			throw new BufferUnderflowException();
+	public static ByteBuffer request_co_private(String sender, String receiver) {
+		
+		var exp = BuildPacket.encodeString(sender);
+		var rec = BuildPacket.encodeString(receiver);
+		int bbSize = exp.remaining() + rec.remaining() + Byte.BYTES;
+		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE) {
+			throw new IllegalStateException("Login too long to be send on the server.");
 		}
-		;
-		bb.put((byte) PacketTypes.REQUEST_CO_USER.ordinal());
-		var exp = UTF8.encode(sender);
-		var dest = UTF8.encode(receiver);
-		bb.putInt(exp.remaining());
+		ByteBuffer bb = ByteBuffer.allocate(bbSize);
+		bb.put(PacketTypes.REQUEST_CO_PRIVATE.opCode);
 		bb.put(exp);
-		bb.putInt(dest.remaining());
-		bb.put(dest);
+		bb.put(rec);
+		bb.flip();
+		return bb;
 	}
 
 	/**
@@ -159,17 +169,15 @@ public class BuildPacket {
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
 	public static ByteBuffer public_msg(String sender, String message) {
-		var exp = UTF8.encode(sender);
-		var msg = UTF8.encode(message);
-		int bbSize = 2 * Integer.BYTES + exp.remaining() + msg.remaining() + Byte.BYTES;
+		var exp = BuildPacket.encodeString(sender);
+		var msg = BuildPacket.encodeString(message);
+		int bbSize = exp.remaining() + msg.remaining() + Byte.BYTES;
 		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + MAX_MESSAGE_SIZE + MAX_NICKNAME_SIZE) {
 			throw new IllegalStateException("Message too long to be send on the server.");
 		}
 		ByteBuffer bb = ByteBuffer.allocate(bbSize);
-		bb.put((byte) PacketTypes.PUBLIC_MSG.ordinal());
-		bb.putInt(exp.remaining());
+		bb.put((byte) PacketTypes.PUBLIC_MSG.opCode);
 		bb.put(exp);
-		bb.putInt(msg.remaining());
 		bb.put(msg);
 		bb.flip();
 		return bb;
@@ -184,25 +192,25 @@ public class BuildPacket {
 	 * @throws BufferUnderFlow error if the ByteBuffer size is too small
 	 */
 	public static ByteBuffer private_msg(String sender, String receiver, String message) {
-		var exp = UTF8.encode(sender);
-		var dest = UTF8.encode(receiver.substring(1));
-		var msg = UTF8.encode(message);
-		int bbSize = 3 * Integer.BYTES + exp.remaining() + dest.remaining() + msg.remaining() + Byte.BYTES;
+
+		var exp = BuildPacket.encodeString(sender);
+		var rec = BuildPacket.encodeString(receiver);
+		var msg = BuildPacket.encodeString(message);
+		
+		int bbSize =  exp.remaining() + rec.remaining() + msg.remaining() + Byte.BYTES;
 		if (bbSize > Byte.BYTES + 3 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE + MAX_MESSAGE_SIZE) {
-			throw new BufferUnderflowException();
+			throw new IllegalStateException("Message or login too long to be send on the server.");
 		}
 		ByteBuffer bb = ByteBuffer.allocate(bbSize);
-		bb.put((byte) PacketTypes.PRIVATE_MSG.ordinal());
-		bb.putInt(exp.remaining());
+		bb.put((byte) PacketTypes.PRIVATE_MSG.opCode);
 		bb.put(exp);
-		bb.putInt(dest.remaining());
-		bb.put(dest);
-		bb.putInt(msg.remaining());
+		bb.put(rec);
 		bb.put(msg);
 		bb.flip();
 		return bb;
 	}
 	
+  
 	/**
 	 * Build a packet meaning the user doesn't exist
 	 * 
@@ -222,5 +230,4 @@ public class BuildPacket {
 		bb.flip();
 		return bb;
 	}
-
 }
