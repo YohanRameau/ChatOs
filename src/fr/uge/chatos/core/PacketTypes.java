@@ -1,5 +1,21 @@
 package fr.uge.chatos.core;
 
 public enum PacketTypes {
-	REQUEST_CO_SERVER, ACCEPTANCE, REFUSAL, REQUEST_CO_USER, PUBLIC_MSG, PRIVATE_MSG
+	REQUEST_CO_SERVER((byte) 0),
+	ACCEPTANCE((byte) 1),
+	REFUSAL((byte) 2),
+	REQUEST_CO_PRIVATE((byte) 3),
+	PUBLIC_MSG((byte) 4),
+	PRIVATE_MSG((byte) 5),
+	ACCEPT_CO_PRIVATE((byte) 6),
+	REFUSAL_CO_PRIVATE((byte) 7),
+	ID_PRIVATE((byte) 8),
+	LOGIN_PRIVATE((byte) 9),
+	ETABLISHED_PRIVATE((byte) 10);
+	
+	public final byte opCode;
+	
+	private PacketTypes(byte opCode) {
+		this.opCode = opCode;
+	}
 }

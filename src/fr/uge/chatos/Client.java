@@ -33,7 +33,7 @@ public class Client {
 		final private SocketChannel sc;
 		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-		final private Queue<ByteBuffer> queue = new LinkedList<>(); // Mettre des Packet plutot que des bytebuffer dans la queue car plusieurs types de packets.
+		final private Queue<ByteBuffer> queue = new LinkedList<>(); 
 		final private PacketReader packetReader = new PacketReader();
 		final private String login;
 		private Packet pck;
@@ -188,7 +188,7 @@ public class Client {
 				return;
 			}
 			key.interestOps(SelectionKey.OP_WRITE);
-			BuildPacket.request_co_server(bbout, login);
+			queueMessage(BuildPacket.request_co_server(login));
 			updateInterestOps();
 		}
 	}
