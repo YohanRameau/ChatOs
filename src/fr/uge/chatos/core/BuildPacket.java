@@ -80,6 +80,12 @@ public class BuildPacket {
 			bb.put((byte) 8).putInt(senderBbSize).put(senderBb).putInt(receiverBbSize).put(receiverBb);
 			bb.flip();
 			return bb;
+		case 9:
+			return id_private(pck.getSender(), pck.getReceiver(), pck.getConnectionId());
+		case 10:
+			return loginPrivate(pck.getConnectionId());
+		case 11:
+			return established_private();
 		default:
 			throw new IllegalStateException("The Opcode " + pck.getOpCode() + " is not defined for ChatOs protocol.");
 		}
@@ -284,7 +290,7 @@ public class BuildPacket {
 		return bb;
 	}
 	
-	public static ByteBuffer login_private(Long id) {
+	public static ByteBuffer loginPrivate(Long id) {
 		int bbSize = Long.BYTES + Byte.BYTES;
 		if (bbSize > Byte.BYTES + Long.BYTES) {
 			throw new IllegalStateException("Message or login too long to be send on the server.");
@@ -296,7 +302,7 @@ public class BuildPacket {
 		return bb;
 	}
 	
-	public static ByteBuffer established_private(Long id) {
+	public static ByteBuffer established_private() {
 		int bbSize = Byte.BYTES;
 		if (bbSize > Byte.BYTES) {
 			throw new IllegalStateException("Message or login too long to be send on the server.");

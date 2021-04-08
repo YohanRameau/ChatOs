@@ -6,17 +6,18 @@ import fr.uge.chatos.ClientList;
 import fr.uge.chatos.packetreader.Packet.PacketBuilder;
 import fr.uge.chatos.packetreader.Reader.ProcessStatus;
 
-public class PacketReader {
+public class PacketReader implements Reader<Packet> {
 
 	private final StringReader sr = new StringReader();
 	private final ByteReader br = new ByteReader();
+	private final LongReader lr = new LongReader();
 	private State state = State.WAITING_BYTE;
 	private PacketBuilder packetBuilder = new PacketBuilder();
 	private final ClientList clientList;
 	private byte opCode = -1;
 
 	private enum State {
-		DONE, WAITING_BYTE, WAITING_SENDER, WAITING_RECEIVER, WAITING_MSG, ERROR
+		DONE, WAITING_BYTE, WAITING_SENDER, WAITING_RECEIVER, WAITING_MSG, WAITING_ID , ERROR
 	}
 
 	public PacketReader(ClientList clientList) {
@@ -43,16 +44,26 @@ public class PacketReader {
 			return getPrivateMessage(bb);
 		case 6:
 			return getAnswer(bb);
+		case 7:
+			return getRequestConnexion(bb);
 		case 8:
 			return getRequestConnexion(bb);
+		case 9:
+			return getIdPrivate(bb);
+		case 10:
+			System.out.println("RECEIVE 10");
+			return getLoginPrivate(bb);
+		case 11:
+			return ProcessStatus.DONE;
 		default:
 			state = State.ERROR;
 			return ProcessStatus.ERROR;
 		}
 	}
 
+	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		
+
 		// OPCODE
 		if (state == State.WAITING_BYTE) {
 			switch (br.process(bb)) {
@@ -92,6 +103,23 @@ public class PacketReader {
 			return ProcessStatus.DONE;
 		case REFILL:
 			state = waitingState;
+			return ProcessStatus.REFILL;
+		default:
+			state = State.ERROR;
+			return ProcessStatus.ERROR;
+		}
+	}
+	
+	private ProcessStatus getId(ByteBuffer bb) {
+		if(state != State.WAITING_ID) {
+			throw new IllegalStateException();
+		}
+		switch(lr.process(bb)) {
+		case DONE:
+			state = State.DONE;
+			return ProcessStatus.DONE;
+		case REFILL:
+			state = State.WAITING_ID;
 			return ProcessStatus.REFILL;
 		default:
 			state = State.ERROR;
@@ -251,7 +279,7 @@ public class PacketReader {
 		// SENDER
 		switch (sr.process(bb)) {
 		case DONE:
-			var sender = sr.get();		
+			var sender = sr.get();
 			if (clientList.isPresent(sender)) {
 				System.out.println("Name already taken or client already identified !");
 				sr.reset();
@@ -286,17 +314,53 @@ public class PacketReader {
 			return getReceiver(bb, State.DONE);
 		}
 		return ProcessStatus.ERROR;
-		
-	}
 
-	public Packet getPacket() {
+	}
+	
+	
+
+	private ProcessStatus getIdPrivate(ByteBuffer bb) {
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
+
+		// SENDER
+		if (state == State.WAITING_SENDER) {
+			getSender(bb, State.WAITING_RECEIVER);
+		}
+
+		// RECEIVER
+		if (state == State.WAITING_RECEIVER) {
+			getReceiver(bb, State.WAITING_ID);
+		}
+		
+		// ID 
+		if(state == State.WAITING_ID) {
+			return getId(bb);
+		}
+		
+		return ProcessStatus.ERROR;
+	}
+	
+	private ProcessStatus getLoginPrivate(ByteBuffer bb) {
+		if (state == State.DONE || state == State.ERROR) {	
+			throw new IllegalStateException();
+		}
+		state = State.WAITING_ID;
+		return getId(bb) ;
+	}
+	
+	@Override
+	public Packet get() {
 		return packetBuilder.build();
 	}
-
+	
+	@Override
 	public void reset() {
 		state = State.WAITING_BYTE;
 		sr.reset();
 		br.reset();
+		lr.reset();
 		opCode = -1;
 	}
 

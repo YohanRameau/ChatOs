@@ -3,245 +3,50 @@ package fr.uge.chatos;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.uge.chatos.context.Context;
+import fr.uge.chatos.context.ServerContext;
 import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
 public class Server {
 
-	static private class Context {
-		final private SelectionKey key;
-		final private SocketChannel sc;
-		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
-		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-		final private Queue<Packet> queue = new LinkedList<>();
-		final private Server server;
-		private final PacketReader packetReader = new PacketReader();
-		private final ClientList clientList;
-		private boolean closed = false;
-		private boolean accepted = false;
-		private String login;
+	static class PrivateConnectionInfo {
+		private final long id;
+		private final InetSocketAddress firstAddress;
+		private final InetSocketAddress secondAddress;
+		private Context firstContext;
+		private Context secondContext;
 
-		private Context(Server server, SelectionKey key, ClientList clientlist) {
-			this.key = key;
-			this.sc = (SocketChannel) key.channel();
-			this.server = server;
-			this.clientList = clientlist;
+		public PrivateConnectionInfo(long id, InetSocketAddress frst, InetSocketAddress scnd) {
+			this.id = id;
+			this.firstAddress = frst;
+			this.secondAddress = scnd;
 		}
-
-		/**
-		 * Process the identification if the client is not already connected. Send an
-		 * error if the opCode is not the identification code else it send an acceptance packet.
-		 * 
-		 * @param opCode
-		 * @param pck
-		 */
-		private void identificationProcess(String login) {
-			if (!accepted && !clientList.isPresent(login)) {
-				clientList.add(login, sc);
-				accepted = true;
-				this.login = login;
-				var acceptance_pck = new Packet.PacketBuilder((byte) 1, login).build();
-				queueMessage(acceptance_pck);
-				return;
-			}
-			var refusal_pck = new Packet.PacketBuilder((byte) 2, login).build();
-			queueMessage(refusal_pck);
-			closed = true;
-			return;
-		}
-
-
-		/**
-		  Process an action according to the type of packet. If the client is not
-		 * accepted it must to send firstly a connection request (OPCODE -> 0)
-		 *  System.out.println("CLOSED");
-		 * @param pck
-		 */
-		private void processPacket(Packet pck) {
-			switch (pck.getOpCode()) {
-			case 0:
-				identificationProcess(pck.getSender());
-			case 1:
-				// TODO
-				// Connection acceptance
-				break;
-			case 2:
-				// TODO
-				// Connection refusal
-				break;
-			case 3:
-				if (!server.unicast(pck)) {
-					var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
-					queueMessage(unknown_user);
-					return;
-				};
-				// Specific connection request
-				break;
-			case 4:
-				server.broadcast(pck);
-				// public message -> broadcast into all connected client contextqueue
-				break;
-			case 5:
-				if (!server.unicast(pck)) {
-					var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
-					queueMessage(unknown_user);
-					return;
-				};
-				// private message -> unicast for a specific connected client.
-				break;
-			case 7:
-				//TODO
-			case 8:
-				System.out.println("Refusal packet creation");
-				server.unicast(pck);
-			default:
-				// TODO
-			}
-		}
-
-		/**
-		 * Process the content of bbin
-		 *
-		 * The convention is that bbin is in write-mode before the call to process and
-		 * after the call
-		 *
-		 */
-		private void processIn() {
-			switch (packetReader.process(bbin)) {
-			case DONE:
-				processPacket(packetReader.getPacket());
-				packetReader.reset();
-				break;
-			case REFILL:
-				return;
-//                case RETRY:
-//                	packetReader.reset();
-//                	return;
-			case ERROR:
-				closed = true;
-				if(!accepted) {
-					// TODO 
-					// envoyez messsage d'erreur.
-				}
-				return;
-			}
-		}
-
-		/**
-		 * Add a message to the message queue, tries to fill bbOut and updateInterestOps
-		 *
-		 * @param msg
-		 */
-		private void queueMessage(Packet msg) {
-			queue.add(msg);
-			processOut();
-			updateInterestOps();
-		}
-
-		/**
-		 * Try to fill bbout from the message queue
-		 *
-		 */
-		private void processOut() {
-
-			for (;;) {
-				if (queue.isEmpty()) {
-					return;
-				}
-				var pck = queue.peek();
-				var bb = BuildPacket.encode(pck);
-				if (bbout.remaining() < bb.remaining()) {
-					return;
-				}
-				bbout.put(bb);
-				queue.poll();
-			}
-		}
-
-		/**
-		 * Update the interestOps of the key looking only at values of the boolean
-		 * closed and of both ByteBuffers.
-		 *
-		 * The convention is that both buffers are in write-mode before the call to
-		 * updateInterestOps and after the call. Also it is assumed that process has
-		 * been be called just before updateInterestOps.
-		 */
-
-		private void updateInterestOps() {
-			var newInterestOps = 0;
-			if (!closed && bbin.hasRemaining()) {
-				newInterestOps |= SelectionKey.OP_READ;
-			}
-			if (bbout.position() != 0) {
-				newInterestOps |= SelectionKey.OP_WRITE;
-			}
-			if (newInterestOps == 0) {
-				silentlyClose();
-				return;
-			}
-			key.interestOps(newInterestOps);
-		}
-
-		private void silentlyClose() {
-			try {
-				clientList.remove(login);
-				sc.close();
-			} catch (IOException e) {
-				// ignore exception
-			}
-		}
-
-		/**
-		 * Performs the read action on sc
-		 *
-		 * The convention is that both buffers are in write-mode before the call to
-		 * doRead and after the call
-		 *
-		 * @throws IOException
-		 */
-		private void doRead() throws IOException {
-			if (sc.read(bbin) == -1) {
-				closed = true;
-			}
-			processIn();
-			updateInterestOps();
-		}
-
-		/**
-		 * Performs the write action on sc
-		 *
-		 * The convention is that both buffers are in write-mode before the call to
-		 * doWrite and after the call
-		 *
-		 * @throws IOException
-		 */
-
-		private void doWrite() throws IOException {
-			bbout.flip();
-			sc.write(bbout);
-			bbout.compact();
-			processOut();
-			updateInterestOps();
-		}
-
 	}
 
 	static private final int BUFFER_SIZE = 1_024;
 	static private final Logger logger = Logger.getLogger(Server.class.getName());
 
+	private final AtomicLong privateConnectionCompt = new AtomicLong();
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final ClientList clientList = new ClientList();
+
+//	private final Map<Long, PrivateConnectionInfo> PrivateConnectionMap = new HashMap<>();
 
 	public Server(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -253,13 +58,17 @@ public class Server {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		while (!Thread.interrupted()) {
-			//printKeys(); // for debug
+			printKeys(); // for debug
 			try {
 				selector.select(this::treatKey);
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
 		}
+	}
+
+	public long generateId() {
+		return privateConnectionCompt.getAndIncrement();
 	}
 
 	/**
@@ -292,9 +101,12 @@ public class Server {
 	private void doAccept(SelectionKey key) throws IOException {
 		var sc = serverSocketChannel.accept();
 		if (sc != null) {
+			System.out.println("DO ACCEPT");
 			sc.configureBlocking(false);
 			var clientKey = sc.register(selector, SelectionKey.OP_READ);
-			clientKey.attach(new Context(this, clientKey, clientList));
+			System.out.println(clientKey);
+			clientKey.attach(new ServerContext(this, clientKey, clientList));
+			System.out.println("finish");
 		} else {
 			logger.warning("The selector was wrong.");
 		}
@@ -314,9 +126,9 @@ public class Server {
 	 *
 	 * @param msg
 	 */
-	private void broadcast(Packet packet) {
+	public void broadcast(Packet packet) {
 		for (var key : selector.keys()) {
-			var context = (Context) key.attachment();
+			var context = (ServerContext) key.attachment();
 			if (context == null) {
 				continue;
 			}
@@ -329,13 +141,14 @@ public class Server {
 	 *
 	 * @param msg
 	 */
-	private boolean unicast(Packet packet) {
+	public boolean unicast(Packet packet) {
+		System.out.println("RECEIVER : " + packet.getReceiver() + " SENDER " + packet.getSender());
 		if (clientList.isPresent(packet.getReceiver())) {
 			for (var key : selector.keys()) {
-				var context = (Context) key.attachment();
+				var context = (ServerContext) key.attachment();
 				if (context == null)
 					continue;
-				if (context.login.equals(packet.getReceiver())) {
+				if (context.isClient(packet.getReceiver())) {
 					context.queueMessage(packet);
 					return true;
 				}
@@ -344,7 +157,30 @@ public class Server {
 		return false;
 	}
 	
-	//Ajout d'une méthode unicast-like pour envoyer des réponses uniquement aux interessés
+	public boolean privateUnicast(Packet packet) {
+		if (clientList.isPresent(packet.getReceiver())) {
+			for (var key : selector.keys()) {
+				var context = (ServerContext) key.attachment();
+				if (context == null)
+					continue;
+				if (context.isClient(packet.getReceiver()) && context.addRequester(packet.getSender())) {
+					context.queueMessage(packet);
+					System.out.println("ADD REQUESTER " + packet.getSender() + " for " + packet.getReceiver());
+					return true;
+				}
+				if (context.isClient(packet.getReceiver()) && !context.addRequester(packet.getSender())){
+					System.out.println("REQUESTER " + packet.getSender() + " RECEIVER: " +packet.getReceiver() + "PAS DNAS LES REQUESTERS");
+					// TODO
+					// Envoyer message d'erreur parce que déjà demandé ou ignorer la demande 
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// Ajout d'une méthode unicast-like pour envoyer des réponses uniquement aux
+	// interessés
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 1) {

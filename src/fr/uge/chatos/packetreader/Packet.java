@@ -2,12 +2,15 @@ package fr.uge.chatos.packetreader;
 
 public class Packet{
 	private byte   opCode;
+	private long   connectionId;
 	private String sender;
 	private String message;
 	private String receiver = null;
 	
+	
 	static public class PacketBuilder {
 		private byte   opCode;
+		private long   connectionId;
 		private String sender;
 		private String message = null;
 		private String receiver = null;
@@ -23,6 +26,11 @@ public class Packet{
 		
 		public PacketBuilder setOpCode(byte opCode) {
 			this.opCode = opCode;
+			return this;
+		}
+		
+		public PacketBuilder setConnectionId(long id) {
+			this.connectionId = id;
 			return this;
 		}
 
@@ -44,21 +52,25 @@ public class Packet{
 
 		
 		public Packet build() {
-			return new Packet(opCode, sender, message, receiver);
+			return new Packet(opCode, sender, message, receiver, connectionId);
 		}
 
 	}
-	private Packet(byte opCode, String sender, String message, String receiver) {
-		if( opCode < 0 ||  opCode > 11 || sender.isEmpty()) {
+	private Packet(byte opCode, String sender, String message, String receiver, long connectionId) {
+		if( opCode < 0 ||  opCode > 11 ) {
 			throw new IllegalStateException();
 		}
 		this.opCode = opCode;
+		this.connectionId = connectionId;
 		this.sender = sender;
 		this.message = message;
 		this.receiver = receiver;
 	}
 	public byte getOpCode() {
 		return opCode;
+	}
+	public long getConnectionId() {
+		return connectionId;
 	}
 	public String getSender() {
 		return sender;
