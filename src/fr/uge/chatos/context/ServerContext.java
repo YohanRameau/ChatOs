@@ -26,6 +26,7 @@ public class ServerContext implements Context{
 	private final ClientList clientList;
 	private final ArrayList<String> requesters = new ArrayList<String>();
 	private boolean closed = false;
+	private boolean privateConnection; 
 	private String login;
 
 	public ServerContext(Server server, SelectionKey key, ClientList clientlist) {
@@ -58,6 +59,11 @@ public class ServerContext implements Context{
 		queueMessage(refusal_pck);
 		closed = true;
 		return;
+	}
+	
+	@Override
+	public boolean privateConnection() {
+		return privateConnection;
 	}
 	
 	/**
@@ -134,17 +140,14 @@ public class ServerContext implements Context{
 			// private message -> unicast for a specific connected client.
 			break;
 		case 7:
-			System.out.println("YES CONNEXION PRIVATE REQUEST");			
 			long id = server.generateId();
 			var idPrivate1 = new Packet.PacketBuilder((byte)9, pck.getSender()).setReceiver(pck.getReceiver()).setConnectionId(id).build();
 			var idPrivate2 = new Packet.PacketBuilder((byte)9, pck.getReceiver()).setReceiver(pck.getSender()).setConnectionId(id).build();
-			System.out.println("Packets created");
 			unicastOrUnknow(idPrivate1);
 			unicastOrUnknow(idPrivate2);
 			break;
 			//TODO
 		case 8:
-			System.out.println("Refusal packet creation");
 			if (!server.unicast(pck)) {
 				var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
 				queueMessage(unknown_user);
@@ -153,6 +156,7 @@ public class ServerContext implements Context{
 			break;
 			
 		case 9:
+			privateConnection = true;
 			System.out.println("RECU PACKET  Login private ID: " + pck.getConnectionId());			
 			break;
 		case 10:
@@ -175,7 +179,6 @@ public class ServerContext implements Context{
 	public void processIn() {
 		switch (packetReader.process(bbin)) {
 		case DONE:
-			System.out.println("RECEIVE");
 			processPacket(packetReader.get());
 			packetReader.reset();
 			break;
@@ -185,7 +188,6 @@ public class ServerContext implements Context{
 //            	packetReader.reset();
 //            	return;
 		case ERROR:
-			System.out.println("EROOOOR");
 			closed = true;
 			return;
 		}
@@ -247,6 +249,7 @@ public class ServerContext implements Context{
 	}
 
 	public void silentlyClose() {
+		server.disconnect(login);
 		try {
 			clientList.remove(login);
 			sc.close();

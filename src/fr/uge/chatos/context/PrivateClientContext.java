@@ -56,6 +56,7 @@ public class PrivateClientContext implements Context {
 				return;
 			case ERROR:
 				closed = true;
+				silentlyClose();
 				return;
 			}
 		}
@@ -98,11 +99,13 @@ public class PrivateClientContext implements Context {
 			System.out.println("User " + pck.getSender() + " and User " + pck.getReceiver()
 					+ " have a private connection now with id " + pck.getConnectionId());
 			client.initializePrivateConnection(pck.getConnectionId());
+			client.registerLogin(pck.getSender(), this);
 			break;
 		case 11:
 			System.out.println("Private Connection ESTABLISHED");
 			break;
 		default:
+			silentlyClose();
 			break;
 		}
 
@@ -188,6 +191,7 @@ public class PrivateClientContext implements Context {
 	public void doRead() throws IOException {
 		if (sc.read(bbin) == -1) {
 			closed = true;
+			silentlyClose();
 		}
 		processIn();
 		updateInterestOps();
@@ -211,13 +215,10 @@ public class PrivateClientContext implements Context {
 	}
 
 	public void doConnect() throws IOException {
-		System.out.println("DO CONNECT " + key.isConnectable());
 		if (!sc.finishConnect()) {
 			return;
 		}
-		System.out.println("CONNECT !!!!!");
 		key.interestOps(SelectionKey.OP_WRITE);
-		System.out.println("after DO CONNECT write:" + key.isWritable() + "connect " + key.isConnectable());
 		sendLoginPrivate();
 		updateInterestOps();
 	}

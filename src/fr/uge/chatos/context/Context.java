@@ -13,4 +13,7 @@ public interface Context {
 	default void doConnect() throws IOException {
 		return;
 	}
+	default public boolean privateConnection() {
+		return false;
+	}
 }
