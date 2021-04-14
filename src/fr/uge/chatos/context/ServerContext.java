@@ -5,12 +5,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import fr.uge.chatos.ClientList;
 import fr.uge.chatos.Server;
 import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.core.LimitedQueue;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
@@ -20,7 +19,7 @@ public class ServerContext implements Context{
 	final private SocketChannel sc;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-	final private Queue<Packet> queue = new LinkedList<>();
+	final private LimitedQueue<Packet> queue = new LimitedQueue<>(20);
 	final private Server server;
 	private final PacketReader packetReader = new PacketReader();
 	private final ClientList clientList;
@@ -65,7 +64,6 @@ public class ServerContext implements Context{
 	 * @param pck
 	 */
 	private void unicastOrUnknow(Packet pck) {
-		System.out.println("UNICASTORUNKNOW");
 		if (!server.unicast(pck)) {
 			
 			var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
@@ -75,7 +73,6 @@ public class ServerContext implements Context{
 	}
 	
 	private void askPrivateConnection(Packet pck) {
-		System.out.println("ASKPRIVATECONNECT");
 		if(requesters.contains(pck.getReceiver())) {
 			// 
 			System.out.println(pck.getSender() + " already ask a private Connection " + pck.getReceiver());
@@ -83,7 +80,7 @@ public class ServerContext implements Context{
 		}
 		addRequester(pck.getReceiver());
 		if (!server.privateUnicast(pck)) {
-			System.out.println(pck.getSender() + " not ask a private Connection befor " + pck.getReceiver());
+			System.out.println(pck.getSender() + " didnt ask a private connection before " + pck.getReceiver());
 			var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
 			queueMessage(unknown_user);
 			return;
@@ -133,18 +130,15 @@ public class ServerContext implements Context{
 			unicastOrUnknow(pck);
 			// private message -> unicast for a specific connected client.
 			break;
-		case 7:
-			System.out.println("YES CONNEXION PRIVATE REQUEST");			
+		case 7:			
 			long id = server.generateId();
 			var idPrivate1 = new Packet.PacketBuilder((byte)9, pck.getSender()).setReceiver(pck.getReceiver()).setConnectionId(id).build();
 			var idPrivate2 = new Packet.PacketBuilder((byte)9, pck.getReceiver()).setReceiver(pck.getSender()).setConnectionId(id).build();
-			System.out.println("Packets created");
 			unicastOrUnknow(idPrivate1);
 			unicastOrUnknow(idPrivate2);
 			break;
 			//TODO
 		case 8:
-			System.out.println("Refusal packet creation");
 			if (!server.unicast(pck)) {
 				var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
 				queueMessage(unknown_user);
@@ -152,8 +146,7 @@ public class ServerContext implements Context{
 			};
 			break;
 			
-		case 9:
-			System.out.println("RECU PACKET  Login private ID: " + pck.getConnectionId());			
+		case 9:		
 			break;
 		case 10:
 			var establishedPck = new Packet.PacketBuilder().setOpCode((byte) 11).build();
@@ -175,7 +168,6 @@ public class ServerContext implements Context{
 	public void processIn() {
 		switch (packetReader.process(bbin)) {
 		case DONE:
-			System.out.println("RECEIVE");
 			processPacket(packetReader.get());
 			packetReader.reset();
 			break;
@@ -185,7 +177,6 @@ public class ServerContext implements Context{
 //            	packetReader.reset();
 //            	return;
 		case ERROR:
-			System.out.println("EROOOOR");
 			closed = true;
 			return;
 		}

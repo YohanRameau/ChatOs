@@ -4,11 +4,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import fr.uge.chatos.Client;
 import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.core.LimitedQueue;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
@@ -20,7 +19,7 @@ public class PrivateClientContext implements Context {
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private Client client;
-	final private Queue<ByteBuffer> queue = new LinkedList<>();
+	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
 	final private PacketReader packetReader = new PacketReader();
 	final private String login;
 	private Packet pck;
@@ -211,13 +210,10 @@ public class PrivateClientContext implements Context {
 	}
 
 	public void doConnect() throws IOException {
-		System.out.println("DO CONNECT " + key.isConnectable());
 		if (!sc.finishConnect()) {
 			return;
 		}
-		System.out.println("CONNECT !!!!!");
 		key.interestOps(SelectionKey.OP_WRITE);
-		System.out.println("after DO CONNECT write:" + key.isWritable() + "connect " + key.isConnectable());
 		sendLoginPrivate();
 		updateInterestOps();
 	}

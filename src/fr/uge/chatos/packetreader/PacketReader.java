@@ -3,6 +3,7 @@ package fr.uge.chatos.packetreader;
 import java.nio.ByteBuffer;
 
 import fr.uge.chatos.ClientList;
+import fr.uge.chatos.core.PacketTypes;
 import fr.uge.chatos.packetreader.Packet.PacketBuilder;
 import fr.uge.chatos.packetreader.Reader.ProcessStatus;
 
@@ -29,31 +30,31 @@ public class PacketReader implements Reader<Packet> {
 	}
 
 	private ProcessStatus parsePacket(ByteBuffer bb, byte b) {
-		switch (b) {
-		case 0:
+		PacketTypes opcode = PacketTypes.values()[b];
+		switch (opcode) {
+		case REQUEST_CO_SERVER:
 			return getIdentification(bb);
-		case 1:
+		case ACCEPTANCE:
 			return getAnswer(bb);
-		case 2:
+		case REFUSAL:
 			return getAnswer(bb);
-		case 3:
+		case REQUEST_CO_PRIVATE:
 			return getRequestConnexion(bb);
-		case 4:
+		case PUBLIC_MSG:
 			return getPublicMessage(bb);
-		case 5:
+		case PRIVATE_MSG:
 			return getPrivateMessage(bb);
-		case 6:
+		case UNKNOWN_USER:
 			return getAnswer(bb);
-		case 7:
+		case ACCEPT_CO_PRIVATE:
 			return getRequestConnexion(bb);
-		case 8:
+		case REFUSAL_CO_PRIVATE:
 			return getRequestConnexion(bb);
-		case 9:
+		case ID_PRIVATE:
 			return getIdPrivate(bb);
-		case 10:
-			System.out.println("RECEIVE 10");
+		case LOGIN_PRIVATE:
 			return getLoginPrivate(bb);
-		case 11:
+		case ESTABLISHED_PRIVATE:
 			return ProcessStatus.DONE;
 		default:
 			state = State.ERROR;

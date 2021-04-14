@@ -113,14 +113,12 @@ public class Client {
 
 	private void sendPrivateConnexionRequest(String input) {
 		String[] tokens = input.split(" ", 2);
-		System.out.println("Private request " + tokens[0] + " length " + tokens.length);
 		if (tokens.length != 1 && tokens.length != 2) {
 			throw new IllegalStateException(
 					"Parsing error: the input have a bad format. /login message for private connexion request");
 		}
 		if (tokens.length == 2 && tokens[1].equals(login)) {
 			// TODO CANNOT SEND A PRIVATE MESSAGE FOR YOURSELF.
-			System.out.println("YOU CANNOT SEND A PRIVATE MESSAGE FOR YOURSELF.");
 			return;
 		}
 		var bb = BuildPacket.request_co_private(login, tokens[0]);

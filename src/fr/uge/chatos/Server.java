@@ -101,12 +101,9 @@ public class Server {
 	private void doAccept(SelectionKey key) throws IOException {
 		var sc = serverSocketChannel.accept();
 		if (sc != null) {
-			System.out.println("DO ACCEPT");
 			sc.configureBlocking(false);
 			var clientKey = sc.register(selector, SelectionKey.OP_READ);
-			System.out.println(clientKey);
 			clientKey.attach(new ServerContext(this, clientKey, clientList));
-			System.out.println("finish");
 		} else {
 			logger.warning("The selector was wrong.");
 		}
@@ -142,7 +139,6 @@ public class Server {
 	 * @param msg
 	 */
 	public boolean unicast(Packet packet) {
-		System.out.println("RECEIVER : " + packet.getReceiver() + " SENDER " + packet.getSender());
 		if (clientList.isPresent(packet.getReceiver())) {
 			for (var key : selector.keys()) {
 				var context = (ServerContext) key.attachment();
@@ -165,11 +161,9 @@ public class Server {
 					continue;
 				if (context.isClient(packet.getReceiver()) && context.addRequester(packet.getSender())) {
 					context.queueMessage(packet);
-					System.out.println("ADD REQUESTER " + packet.getSender() + " for " + packet.getReceiver());
 					return true;
 				}
 				if (context.isClient(packet.getReceiver()) && !context.addRequester(packet.getSender())){
-					System.out.println("REQUESTER " + packet.getSender() + " RECEIVER: " +packet.getReceiver() + "PAS DNAS LES REQUESTERS");
 					// TODO
 					// Envoyer message d'erreur parce que déjà demandé ou ignorer la demande 
 					return true;
