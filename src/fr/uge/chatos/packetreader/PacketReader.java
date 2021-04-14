@@ -5,7 +5,6 @@ import java.nio.ByteBuffer;
 import fr.uge.chatos.ClientList;
 import fr.uge.chatos.core.PacketTypes;
 import fr.uge.chatos.packetreader.Packet.PacketBuilder;
-import fr.uge.chatos.packetreader.Reader.ProcessStatus;
 
 public class PacketReader implements Reader<Packet> {
 

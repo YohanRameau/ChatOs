@@ -46,7 +46,7 @@ public class Server {
 	private final Selector selector;
 	private final ClientList clientList = new ClientList();
 
-//	private final Map<Long, PrivateConnectionInfo> PrivateConnectionMap = new HashMap<>();
+	private final Map<Long, PrivateConnectionInfo> PrivateConnectionMap = new HashMap<>();
 
 	public Server(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -117,7 +117,15 @@ public class Server {
 			// ignore exception
 		}
 	}
-
+	
+	public void disconnect(String login) {
+		clientList.remove(login);
+	}
+	
+//	public boolean registerPrivateConnection(long id, ) {
+//		PrivateConnectionMap.put(key, value)
+//	}
+	
 	/**
 	 * Add a message to all connected clients queue
 	 *
@@ -126,7 +134,7 @@ public class Server {
 	public void broadcast(Packet packet) {
 		for (var key : selector.keys()) {
 			var context = (ServerContext) key.attachment();
-			if (context == null) {
+			if (context == null || context.privateConnection() == true) {
 				continue;
 			}
 			context.queueMessage(packet);

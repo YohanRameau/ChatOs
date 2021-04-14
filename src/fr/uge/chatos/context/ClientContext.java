@@ -54,6 +54,8 @@ public class ClientContext implements Context {
 				return;
 			case ERROR:
 				closed = true;
+				System.out.println("Error during process of packet.");
+				silentlyClose();
 				return;
 			}
 		}
@@ -65,8 +67,9 @@ public class ClientContext implements Context {
 			System.out.println("Accepted connexion " + pck.getSender());
 			break;
 		case 2:
-			System.out.println("Refused connexion");
+			System.out.println("Refused connexion, try again with an other login.");
 			closed = true;
+			silentlyClose();
 			break;
 		case 3:
 			System.out.println(pck.getSender()
@@ -179,6 +182,7 @@ public class ClientContext implements Context {
 	public void doRead() throws IOException {
 		if (sc.read(bbin) == -1) {
 			closed = true;
+			silentlyClose();
 		}
 		processIn();
 		updateInterestOps();

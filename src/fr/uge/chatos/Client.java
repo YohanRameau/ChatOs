@@ -32,7 +32,7 @@ public class Client {
 	private final String login;
 	private final Thread console;
 	private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
-	private final Map<Long, PrivateClientContext> privateConnectionMap = new HashMap<>();
+	private final Map<String, PrivateClientContext> privateConnectionMap = new HashMap<>();
 	private ClientContext mainContext;
 
 	enum MessageType {
@@ -99,14 +99,15 @@ public class Client {
 	private void sendPrivateMessage(String input) {
 		String[] tokens = input.split(" ", 2);
 		if (tokens.length != 2) {
-			throw new IllegalStateException(
+			System.out.println(
 					"Parsing error: the input have a bad format. @login message for private message");
-		}
-		if (tokens[1].equals(login)) {
-			// TODO CANNOT SEND A PRIVATE MESSAGE FOR HIMSELF.
 			return;
 		}
-
+		if (tokens[0].equals(login)) {
+			// TODO CANNOT SEND A PRIVATE MESSAGE FOR HIMSELF.
+			System.out.println("You cannot send a private message for youself");
+			return;
+		}
 		var bb = BuildPacket.private_msg(login, tokens[0], tokens[1]);
 		mainContext.queueMessage(bb);
 	}
@@ -114,11 +115,12 @@ public class Client {
 	private void sendPrivateConnexionRequest(String input) {
 		String[] tokens = input.split(" ", 2);
 		if (tokens.length != 1 && tokens.length != 2) {
-			throw new IllegalStateException(
+			System.out.println(
 					"Parsing error: the input have a bad format. /login message for private connexion request");
+			return;
 		}
-		if (tokens.length == 2 && tokens[1].equals(login)) {
-			// TODO CANNOT SEND A PRIVATE MESSAGE FOR YOURSELF.
+		if (tokens.length == 2 && tokens[0].equals(login)) {
+			System.out.println("YOU CANNOT SEND A PRIVATE request FOR YOURSELF.");
 			return;
 		}
 		var bb = BuildPacket.request_co_private(login, tokens[0]);
@@ -144,10 +146,11 @@ public class Client {
 		var ctx = new PrivateClientContext(key, login + 1, this, id);
 		key.attach(ctx);
 		privateSc.connect(serverAddress);
-		privateConnectionMap.put(id, ctx);
 	}
-
 	
+	public void registerLogin(String login, PrivateClientContext ctx){
+		privateConnectionMap.put(login, ctx);
+	}
 
 	/**
 	 * Parse an input to determinate the type of packet. content.

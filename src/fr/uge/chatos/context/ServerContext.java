@@ -25,6 +25,7 @@ public class ServerContext implements Context{
 	private final ClientList clientList;
 	private final ArrayList<String> requesters = new ArrayList<String>();
 	private boolean closed = false;
+	private boolean privateConnection; 
 	private String login;
 
 	public ServerContext(Server server, SelectionKey key, ClientList clientlist) {
@@ -57,6 +58,11 @@ public class ServerContext implements Context{
 		queueMessage(refusal_pck);
 		closed = true;
 		return;
+	}
+	
+	@Override
+	public boolean privateConnection() {
+		return privateConnection;
 	}
 	
 	/**
@@ -130,7 +136,7 @@ public class ServerContext implements Context{
 			unicastOrUnknow(pck);
 			// private message -> unicast for a specific connected client.
 			break;
-		case 7:			
+		case 7:
 			long id = server.generateId();
 			var idPrivate1 = new Packet.PacketBuilder((byte)9, pck.getSender()).setReceiver(pck.getReceiver()).setConnectionId(id).build();
 			var idPrivate2 = new Packet.PacketBuilder((byte)9, pck.getReceiver()).setReceiver(pck.getSender()).setConnectionId(id).build();
@@ -146,7 +152,9 @@ public class ServerContext implements Context{
 			};
 			break;
 			
-		case 9:		
+		case 9:
+			privateConnection = true;
+			System.out.println("RECU PACKET  Login private ID: " + pck.getConnectionId());			
 			break;
 		case 10:
 			var establishedPck = new Packet.PacketBuilder().setOpCode((byte) 11).build();
@@ -238,6 +246,7 @@ public class ServerContext implements Context{
 	}
 
 	public void silentlyClose() {
+		server.disconnect(login);
 		try {
 			clientList.remove(login);
 			sc.close();
