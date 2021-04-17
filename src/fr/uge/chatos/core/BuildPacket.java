@@ -93,7 +93,7 @@ public class BuildPacket {
 	}
 	
 	
-	private static ByteBuffer encodeString(String string) {
+	public static ByteBuffer encodeString(String string) {
 		
 		var stringBb = UTF8.encode(string);
 		int senderBbSize = stringBb.remaining();

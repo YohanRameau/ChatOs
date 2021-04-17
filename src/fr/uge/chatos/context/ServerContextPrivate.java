@@ -4,108 +4,35 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 
 import fr.uge.chatos.ClientList;
 import fr.uge.chatos.Server;
 import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.frame.Acceptance;
-import fr.uge.chatos.frame.Refusal;
-import fr.uge.chatos.frame.SendToOne;
-import fr.uge.chatos.frame.Unknown_user;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
-public class ServerContext implements Context{
+public class ServerContextPrivate implements Context{
 	private static int BUFFER_SIZE = 1024;
 	final private SelectionKey key;
 	final private SocketChannel sc;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-	final private LimitedQueue<Frame> queue = new LimitedQueue<>(20);
+	final private LimitedQueue<Packet> queue = new LimitedQueue<>(20);
 	final private Server server;
 	private final PacketReader packetReader = new PacketReader();
-	private final ClientList clientList;
-	private final ArrayList<String> requesters = new ArrayList<String>();
-	private boolean closed = false;
-	private boolean privateConnection; 
-	private String login;
+	private boolean closed = false; 
 
-	public ServerContext(Server server, SelectionKey key, ClientList clientlist) {
+	public ServerContextPrivate(Server server, SelectionKey key) {
 		this.key = key;
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
-		this.clientList = clientlist;
 	}
 	
-	public boolean isClient(String login) {
-		return this.login.equals(login);
-	}
-
-	/**
-	 * Process the identification if the client is not already connected. Send an
-	 * error if the opCode is not the identification code else it send an acceptance packet.
-	 * 
-	 * @param opCode
-	 * @param pck
-	 */
-	public void identificationProcess(String login) {
-		if (!clientList.isPresent(login)) {
-			clientList.add(login, sc);
-			this.login = login;
-			var acceptance_pck = new Acceptance(login);
-			queueMessage(acceptance_pck);
-			return;
-		}
-		var refusal_pck = new Refusal(login);
-		queueMessage(refusal_pck);
-		closed = true;
-		return;
-	}
 	
 	@Override
 	public boolean privateConnection() {
-		return privateConnection;
-	}
-	
-	/**
-	 * Send an unicast to the receiver or send an unknown packet if the receiver it's not connected.
-	 * @param pck
-	 */
-	public void unicastOrUnknow(SendToOne pck) {
-		if (!server.unicast(pck)) {
-			
-			var unknown_user = new Unknown_user();
-			queueMessage(unknown_user);
-			return;
-		};
-	}
-	
-	public void askPrivateConnection(SendToOne pck) {
-		if(requesters.contains(pck.getReceiver())) {
-			// 
-			System.out.println(pck.getSender() + " already ask a private Connection " + pck.getReceiver());
-			return;
-		}
-		addRequester(pck.getReceiver());
-		if (!server.privateUnicast(pck)) {
-			System.out.println(pck.getSender() + " didnt ask a private connection before " + pck.getReceiver());
-			var unknown_user = new Unknown_user();
-			queueMessage(unknown_user);
-			return;
-		};
-	}
-	
-	
-	
-	public boolean addRequester(String login) {
-		return requesters.add(login);
-	}
-	
-	public void removeRequester(String login) {
-		requesters.remove(login);
+		return true;
 	}
 	
 
@@ -116,7 +43,14 @@ public class ServerContext implements Context{
 	 * @param pck
 	 */
 	private void processPacket(Packet pck) {
-		//TODO
+		switch (pck.getOpCode()) {
+		case 4:
+			server.broadcast(pck);
+			// public message -> broadcast into all connected client contextqueue
+			break;
+		default:
+			silentlyClose();
+		}
 	}
 
 	/**
@@ -148,7 +82,7 @@ public class ServerContext implements Context{
 	 *
 	 * @param msg
 	 */
-	public void queueMessage(Frame msg) {
+	public void queueMessage(Packet msg) {
 		queue.add(msg);
 		processOut();
 		updateInterestOps();
@@ -165,7 +99,7 @@ public class ServerContext implements Context{
 				return;
 			}
 			var pck = queue.peek();
-			var bb = pck.encode();
+			var bb = BuildPacket.encode(pck);
 			if (bbout.remaining() < bb.remaining()) {
 				return;
 			}
@@ -199,9 +133,7 @@ public class ServerContext implements Context{
 	}
 
 	public void silentlyClose() {
-		server.disconnect(login);
 		try {
-			clientList.remove(login);
 			sc.close();
 		} catch (IOException e) {
 			// ignore exception

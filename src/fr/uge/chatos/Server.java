@@ -19,6 +19,9 @@ import java.util.logging.Logger;
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.ServerContext;
 import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.core.Frame;
+import fr.uge.chatos.frame.SendToAll;
+import fr.uge.chatos.frame.SendToOne;
 import fr.uge.chatos.packetreader.Packet;
 import fr.uge.chatos.packetreader.PacketReader;
 
@@ -131,7 +134,7 @@ public class Server {
 	 *
 	 * @param msg
 	 */
-	public void broadcast(Packet packet) {
+	public void broadcast(SendToAll packet) {
 		for (var key : selector.keys()) {
 			var context = (ServerContext) key.attachment();
 			if (context == null || context.privateConnection() == true) {
@@ -146,14 +149,14 @@ public class Server {
 	 *
 	 * @param msg
 	 */
-	public boolean unicast(Packet packet) {
-		if (clientList.isPresent(packet.getReceiver())) {
+	public boolean unicast(SendToOne pck) {
+		if (clientList.isPresent(pck.getReceiver())) {
 			for (var key : selector.keys()) {
 				var context = (ServerContext) key.attachment();
 				if (context == null)
 					continue;
-				if (context.isClient(packet.getReceiver())) {
-					context.queueMessage(packet);
+				if (context.isClient(pck.getReceiver())) {
+					context.queueMessage(pck);
 					return true;
 				}
 			}
@@ -161,7 +164,7 @@ public class Server {
 		return false;
 	}
 	
-	public boolean privateUnicast(Packet packet) {
+	public boolean privateUnicast(SendToOne packet) {
 		if (clientList.isPresent(packet.getReceiver())) {
 			for (var key : selector.keys()) {
 				var context = (ServerContext) key.attachment();
