@@ -113,12 +113,16 @@ public class PrivateMessageReader implements Reader<Private_msg>{
 	
 	@Override
 	public Private_msg get() {
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get call but process is not Done.");
+		}
 		return new Private_msg(sender, receiver, message);
 	}
 	
 	@Override
 	public void reset() {
 		sr.reset();		
+		state = State.WAITING_SENDER;
 	}	
 	
 }

@@ -36,6 +36,8 @@ public class LoginPrivateReader implements Reader<Login_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
+		System.out.println("REQUEST LOGIN PRIVATE ");
+
 		return getLoginPrivate(bb);
 	}
 	

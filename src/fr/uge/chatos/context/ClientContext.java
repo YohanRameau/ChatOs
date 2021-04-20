@@ -26,7 +26,7 @@ public class ClientContext implements Context {
 	final private FrameReader frameReader = new FrameReader();
 	final private String login;
 	private Frame pck;
-	private ClientFrameVisitor visitor = new ClientFrameVisitor();
+	private ClientFrameVisitor visitor ;
 	private boolean closed = false;
 
 	public ClientContext(SelectionKey key, String login, Client client) {
@@ -34,6 +34,7 @@ public class ClientContext implements Context {
 		this.sc = (SocketChannel) key.channel();
 		this.login = login;
 		this.client = client;
+		this.visitor = new ClientFrameVisitor(client ,this);
 	}
 
 	
@@ -124,6 +125,7 @@ public class ClientContext implements Context {
 			interesOps |= SelectionKey.OP_WRITE;
 		}
 		if (interesOps == 0) {
+			System.out.println("Error during process of packet.");
 			silentlyClose();
 			return;
 		}
@@ -150,6 +152,7 @@ public class ClientContext implements Context {
 	public void doRead() throws IOException {
 		if (sc.read(bbin) == -1) {
 			closed = true;
+			
 			silentlyClose();
 		}
 		processIn();

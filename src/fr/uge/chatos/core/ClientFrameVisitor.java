@@ -8,9 +8,11 @@ import fr.uge.chatos.frame.Accept_co_private;
 import fr.uge.chatos.frame.Acceptance;
 import fr.uge.chatos.frame.Established_private;
 import fr.uge.chatos.frame.Id_private;
+import fr.uge.chatos.frame.Private_msg;
 import fr.uge.chatos.frame.Public_msg;
 import fr.uge.chatos.frame.Refusal;
 import fr.uge.chatos.frame.Refusal_co_private;
+import fr.uge.chatos.frame.Request_co_private;
 import fr.uge.chatos.frame.Unknown_user;
 
 public class ClientFrameVisitor implements FrameVisitor{
@@ -19,6 +21,11 @@ public class ClientFrameVisitor implements FrameVisitor{
 	private ClientContext ctx;
 	private boolean accepted = false;
 
+	public ClientFrameVisitor(Client client ,ClientContext ctx) {
+		this.client = client;
+		this.ctx = ctx;
+	}
+	
 	@Override
 	public void visit(Acceptance pck) {
 		accepted = true;
@@ -41,6 +48,15 @@ public class ClientFrameVisitor implements FrameVisitor{
 			return;
 		}
 		ctx.displayMessage(pck);		
+	}
+	
+	@Override
+	public void visit(Private_msg pck) {
+		if (!accepted) {
+			ctx.silentlyClose();
+			return;
+		}
+		System.out.println("(Private) " + pck.getSender() + ": " + pck.getMessage() );
 	}
 
 	@Override
@@ -65,6 +81,12 @@ public class ClientFrameVisitor implements FrameVisitor{
 			// TODO Auto-generated catch block
 		}
 	}; 
+	
+	@Override 
+	public void visit(Request_co_private pck){
+		System.out.println(pck.getSender() + " Sent you a private connexion request | Accept (\\yes login) or Decline (\\no login) ?");
+		client.processCommands();
+	}
 	
 	@Override
 	public void visit(Refusal_co_private pck) {

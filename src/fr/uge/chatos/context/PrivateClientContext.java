@@ -23,7 +23,7 @@ public class PrivateClientContext implements Context {
 	final private Client client;
 	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
 	final private FrameReader frameReader = new FrameReader();
-	private ClientFrameVisitor visitor = new ClientFrameVisitor();
+	private ClientFrameVisitor visitor = new ClientFrameVisitor(this);
 	final private String login;
 	private Frame pck;
 	private final long id;

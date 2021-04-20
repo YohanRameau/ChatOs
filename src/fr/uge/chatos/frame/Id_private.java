@@ -9,8 +9,6 @@ import fr.uge.chatos.core.PacketTypes;
 
 public class Id_private extends SendToOne{
 
-	private String sender;
-	private String receiver;
 	private long id;
 	
 	public Id_private(String sender, String receiver, long id) {
@@ -30,8 +28,8 @@ public class Id_private extends SendToOne{
 
 	@Override
 	public ByteBuffer encode() {
-		var exp = BuildPacket.encodeString(sender);
-		var rec = BuildPacket.encodeString(receiver);
+		var exp = BuildPacket.encodeString(super.getSender());
+		var rec = BuildPacket.encodeString(super.getReceiver());
 		
 		int bbSize =  exp.remaining() + rec.remaining() + Long.BYTES + Byte.BYTES;
 		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE + Long.BYTES) {

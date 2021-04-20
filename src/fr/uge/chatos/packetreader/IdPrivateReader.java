@@ -106,6 +106,7 @@ public class IdPrivateReader implements Reader<Id_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
+		System.out.println("REQUEST ID PRIVATE");
 		return getIdPrivate(bb);
 	}
 	

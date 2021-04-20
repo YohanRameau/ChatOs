@@ -83,6 +83,7 @@ public class RequestCoPrivateReader implements Reader<Request_co_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
+		System.out.println("REQUEST CO PRIVATE");
 		return getRequestConnexion(bb);
 	}
 	

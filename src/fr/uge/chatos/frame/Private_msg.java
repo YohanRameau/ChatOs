@@ -9,8 +9,6 @@ import fr.uge.chatos.core.PacketTypes;
 
 public class Private_msg extends SendToOne{
 
-	private String sender;
-	private String receiver;
 	private String message;
 	
 	
@@ -18,6 +16,10 @@ public class Private_msg extends SendToOne{
 		super(sender, receiver);
 		Objects.requireNonNull(message);
 		this.message = message;
+	}
+	
+	public String getMessage() {
+		return message;
 	}
 
 	@Override
@@ -27,8 +29,8 @@ public class Private_msg extends SendToOne{
 
 	@Override
 	public ByteBuffer encode() {
-		var exp = BuildPacket.encodeString(sender);
-		var rec = BuildPacket.encodeString(receiver);
+		var exp = BuildPacket.encodeString(getSender());
+		var rec = BuildPacket.encodeString(getReceiver());
 		var msg = BuildPacket.encodeString(message);
 		
 		int bbSize =  exp.remaining() + rec.remaining() + msg.remaining() + Byte.BYTES;

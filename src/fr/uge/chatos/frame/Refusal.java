@@ -23,8 +23,11 @@ public class Refusal implements Frame{
 
 	@Override
 	public ByteBuffer encode() {
-		ByteBuffer bb = ByteBuffer.allocate(1);
-		bb.put((byte) PacketTypes.REFUSAL.opCode);
+		
+		var senderBb = UTF8.encode(sender);
+		int senderBbSize = senderBb.remaining();
+		var bb = ByteBuffer.allocate(Byte.BYTES + Integer.BYTES + senderBbSize);
+		bb.put(PacketTypes.REFUSAL.opCode).putInt(senderBbSize).put(senderBb);
 		bb.flip();
 		return bb;
 	}

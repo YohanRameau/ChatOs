@@ -190,7 +190,7 @@ public class Client {
 	 * Console Thread. The command can be a public message, a private message or a
 	 * private connection request.
 	 */
-	private void processCommands() {
+	public void processCommands() {
 		if (commandQueue.isEmpty()) {
 			return;
 		}

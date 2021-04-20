@@ -88,12 +88,16 @@ public class PublicMessageReader implements Reader<Public_msg>{
 	
 	@Override
 	public Public_msg get() {
+		if (state != State.DONE) {
+			throw new IllegalStateException("Get but stat is not done.");
+		}
 		return new Public_msg(sender, message);
 	}
 	
 	@Override
 	public void reset() {
-		sr.reset();		
+		sr.reset();
+		state = State.WAITING_SENDER;
 	}	
 	
 }

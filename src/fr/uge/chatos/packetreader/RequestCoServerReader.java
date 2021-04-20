@@ -50,6 +50,7 @@ public class RequestCoServerReader implements Reader<Request_co_server>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
+		System.out.println("REQUEST CO SERVER");
 		return getIdentification(bb);
 	}
 	

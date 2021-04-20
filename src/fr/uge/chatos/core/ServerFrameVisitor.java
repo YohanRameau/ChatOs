@@ -56,6 +56,7 @@ public class ServerFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(Public_msg pck) {
+		System.out.println("Visit server visitor " + pck.getSender() + " " + pck.getMessage());
 		server.broadcast(pck);		
 	}
 
@@ -76,6 +77,7 @@ public class ServerFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(Request_co_server pck) {
+		System.out.println("REQUEST CO SERVER: " + pck.getSender());
 		ctx.identificationProcess(pck.getSender());
 		accepted = true;
 	}

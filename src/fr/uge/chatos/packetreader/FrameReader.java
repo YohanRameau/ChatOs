@@ -132,6 +132,35 @@ public class FrameReader implements Reader<Frame> {
 	@Override
 	public void reset() {
 		state = State.WAITING_BYTE;
+		PacketTypes opcode = PacketTypes.values()[opCode];
+		switch (opcode) {
+		case REQUEST_CO_SERVER:
+			rcsr.reset();
+		case ACCEPTANCE:
+			ar.reset();
+		case REFUSAL:
+			rr.reset();
+		case REQUEST_CO_PRIVATE:
+			rcprr.reset();
+		case PUBLIC_MSG:
+			pmr.reset();
+		case PRIVATE_MSG:
+			prmr.reset();
+		case UNKNOWN_USER:
+			uur.reset();
+		case ACCEPT_CO_PRIVATE:
+			acpr.reset();
+		case REFUSAL_CO_PRIVATE:
+			recpr.reset();
+		case ID_PRIVATE:
+			ipr.reset();
+		case LOGIN_PRIVATE:
+			lpr.reset();
+		case ESTABLISHED_PRIVATE:
+			epr.reset();
+		default:
+			;
+		}
 		br.reset();
 		opCode = -1;
 	}

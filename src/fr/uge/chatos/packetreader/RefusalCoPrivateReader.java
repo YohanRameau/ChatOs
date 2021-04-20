@@ -83,6 +83,7 @@ public class RefusalCoPrivateReader implements Reader<Refusal_co_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
+		System.out.println("REQUEST REFUSAL CO PRIVATE");
 		return getRequestConnexion(bb);
 	}
 	

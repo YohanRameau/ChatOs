@@ -125,7 +125,9 @@ public class ServerContext implements Context{
 	public void processIn() {
 		switch (frameReader.process(bbin)) {
 		case DONE:
+			System.out.println("DONE PROCESS IN");
 			pck = frameReader.get();
+			System.out.println("End get");
 			treatFrame(pck);
 			frameReader.reset();
 			break;
