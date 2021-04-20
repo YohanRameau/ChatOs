@@ -21,6 +21,13 @@ public class ServerFrameVisitor implements FrameVisitor{
 	private ServerContext ctx;
 	private boolean accepted = false;
 	
+	
+	public ServerFrameVisitor(Server server, ServerContext ctx, boolean accepted) {
+		this.server = server;
+		this.ctx = ctx;
+		this.accepted = accepted;
+	}
+
 	@Override
 	public void visit(Accept_co_private pck) {
 		long id = server.generateId();
@@ -31,20 +38,10 @@ public class ServerFrameVisitor implements FrameVisitor{
 	}
 
 	@Override
-	public void visit(Acceptance pck) {
-				
-	}
-
-	@Override
 	public void visit(Established_private pck) {
 		System.out.println("Private connection established !");
 	}
 
-	@Override
-	public void visit(Id_private pck) {
-		// TODO Auto-generated method stub
-		
-	}
 
 	@Override
 	public void visit(Login_private pck) {
@@ -76,21 +73,11 @@ public class ServerFrameVisitor implements FrameVisitor{
 		ctx.askPrivateConnection(pck);		
 	}
 
-	@Override
-	public void visit(Refusal pck) {
-				
-	}
 
 	@Override
 	public void visit(Request_co_server pck) {
 		ctx.identificationProcess(pck.getSender());
 		accepted = true;
 	}
-
-	@Override
-	public void visit(Unknown_user unknown_user) {
-		System.out.println("This user is not present on this server !");		
-	}
  
-	
 }

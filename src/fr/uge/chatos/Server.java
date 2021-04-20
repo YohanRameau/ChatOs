@@ -23,7 +23,7 @@ import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.frame.SendToAll;
 import fr.uge.chatos.frame.SendToOne;
 import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+import fr.uge.chatos.packetreader.FrameReader;
 
 public class Server {
 

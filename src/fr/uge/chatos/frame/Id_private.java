@@ -4,23 +4,18 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.FrameVisitor;
 import fr.uge.chatos.core.PacketTypes;
 
-public class Id_private implements Frame{
+public class Id_private extends SendToOne{
 
 	private String sender;
 	private String receiver;
 	private long id;
 	
-	
 	public Id_private(String sender, String receiver, long id) {
-		Objects.requireNonNull(sender);
-		Objects.requireNonNull(receiver);
+		super(sender, receiver);
 		Objects.requireNonNull(id);
-		this.sender = sender;
-		this.receiver = receiver;
 		this.id = id;
 	}
 	

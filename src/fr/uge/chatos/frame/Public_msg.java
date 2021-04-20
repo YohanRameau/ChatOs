@@ -18,6 +18,16 @@ public class Public_msg extends SendToAll{
 		this.message = message;
 	}
 
+	
+	
+	public String getSender() {
+		return sender;
+	}
+
+	public String getMessage() {
+		return message;
+	}
+
 	@Override
 	public void accept(FrameVisitor visitor) {
 		visitor.visit(this);		

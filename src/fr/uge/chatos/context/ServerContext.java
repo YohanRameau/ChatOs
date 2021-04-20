@@ -8,15 +8,14 @@ import java.util.ArrayList;
 
 import fr.uge.chatos.ClientList;
 import fr.uge.chatos.Server;
-import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
+import fr.uge.chatos.core.ServerFrameVisitor;
 import fr.uge.chatos.frame.Acceptance;
 import fr.uge.chatos.frame.Refusal;
 import fr.uge.chatos.frame.SendToOne;
 import fr.uge.chatos.frame.Unknown_user;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+import fr.uge.chatos.packetreader.FrameReader;
 
 public class ServerContext implements Context{
 	private static int BUFFER_SIZE = 1024;
@@ -26,10 +25,12 @@ public class ServerContext implements Context{
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private LimitedQueue<Frame> queue = new LimitedQueue<>(20);
 	final private Server server;
-	private final PacketReader packetReader = new PacketReader();
+	private final FrameReader frameReader = new FrameReader();
 	private final ClientList clientList;
 	private final ArrayList<String> requesters = new ArrayList<String>();
 	private boolean closed = false;
+	private ServerFrameVisitor visitor;
+	private Frame pck;
 	private boolean privateConnection; 
 	private String login;
 
@@ -38,6 +39,7 @@ public class ServerContext implements Context{
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
 		this.clientList = clientlist;
+		this.visitor = new ServerFrameVisitor(server, this, closed);
 	}
 	
 	public boolean isClient(String login) {
@@ -109,14 +111,8 @@ public class ServerContext implements Context{
 	}
 	
 
-	/**
-	  Process an action according to the type of packet. If the client is not
-	 * accepted it must to send firstly a connection request (OPCODE -> 0)
-	 *  System.out.println("CLOSED");
-	 * @param pck
-	 */
-	private void processPacket(Packet pck) {
-		//TODO
+	private void treatFrame(Frame frame) {
+		frame.accept(visitor);
 	}
 
 	/**
@@ -127,10 +123,11 @@ public class ServerContext implements Context{
 	 *
 	 */
 	public void processIn() {
-		switch (packetReader.process(bbin)) {
+		switch (frameReader.process(bbin)) {
 		case DONE:
-			processPacket(packetReader.get());
-			packetReader.reset();
+			pck = frameReader.get();
+			treatFrame(pck);
+			frameReader.reset();
 			break;
 		case REFILL:
 			return;

@@ -16,4 +16,5 @@ public interface Context {
 	default public boolean privateConnection() {
 		return false;
 	}
+
 }

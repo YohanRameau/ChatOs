@@ -7,9 +7,11 @@ import java.nio.channels.SocketChannel;
 
 import fr.uge.chatos.Client;
 import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.core.ClientFrameVisitor;
+import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+import fr.uge.chatos.frame.Public_msg;
+import fr.uge.chatos.packetreader.FrameReader;
 
 public class PrivateClientContext implements Context {
 	static private int BUFFER_SIZE = 10_000;
@@ -20,9 +22,10 @@ public class PrivateClientContext implements Context {
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private Client client;
 	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
-	final private PacketReader packetReader = new PacketReader();
+	final private FrameReader frameReader = new FrameReader();
+	private ClientFrameVisitor visitor = new ClientFrameVisitor();
 	final private String login;
-	private Packet pck;
+	private Frame pck;
 	private final long id;
 	private boolean closed = false;
 
@@ -34,6 +37,10 @@ public class PrivateClientContext implements Context {
 		this.id = id;
 	}
 
+	private void treatFrame(Frame frame) {
+		frame.accept(visitor);
+	}
+	
 	/**
 	 * Process the content of bbin
 	 *
@@ -45,11 +52,11 @@ public class PrivateClientContext implements Context {
 	 */
 	public void processIn() throws IOException {
 		for (;;) {
-			switch (packetReader.process(bbin)) {
+			switch (frameReader.process(bbin)) {
 			case DONE:
-				pck = packetReader.get();
-				parsePacket();
-				packetReader.reset();
+				pck = frameReader.get();
+				treatFrame(pck);
+				frameReader.reset();
 				break;
 			case REFILL:
 				return;
@@ -66,51 +73,7 @@ public class PrivateClientContext implements Context {
 		queueMessage(bb);
 	}
 
-	void parsePacket() throws IOException {
-		switch (pck.getOpCode()) {
-		case 1:
-			System.out.println("Accepted connexion " + pck.getSender());
-			break;
-		case 2:
-			System.out.println("Refused connexion");
-			closed = true;
-			break;
-		case 3:
-			System.out.println(pck.getSender()
-					+ " Sent you a private connexion request | Accept (\\yes login) or Decline (\\no login) ?");
-			break;
-		case 4:
-			displayMessage(pck);
-			break;
-		case 5:
-			System.out.println("(Private) " + pck.getSender() + ": " + pck.getMessage());
-			break;
-		case 6:
-			System.out.println("The user you try to reach doesn't exist !");
-			break;
-		case 7:
-			System.out.println("User " + pck.getSender() + " has accepted the connexion request !");
-			break;
-		case 8:
-			System.out.println("User " + pck.getSender() + " has refused the connexion request");
-			break;
-		case 9:
-			System.out.println("User " + pck.getSender() + " and User " + pck.getReceiver()
-					+ " have a private connection now with id " + pck.getConnectionId());
-			client.initializePrivateConnection(pck.getConnectionId());
-			client.registerLogin(pck.getSender(), this);
-			break;
-		case 11:
-			System.out.println("Private Connection ESTABLISHED");
-			break;
-		default:
-			silentlyClose();
-			break;
-		}
-
-	}
-
-	void displayMessage(Packet pck) {
+	void displayMessage(Public_msg pck) {
 		if (pck.getSender().equals(login)) {
 			System.out.println("Me: " + pck.getMessage());
 			return;

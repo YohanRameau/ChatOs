@@ -8,9 +8,12 @@ import java.nio.channels.SocketChannel;
 import fr.uge.chatos.ClientList;
 import fr.uge.chatos.Server;
 import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
+import fr.uge.chatos.core.ServerFrameVisitor;
+import fr.uge.chatos.core.ServerPrivateFrameVisitor;
 import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+import fr.uge.chatos.packetreader.FrameReader;
 
 public class ServerContextPrivate implements Context{
 	private static int BUFFER_SIZE = 1024;
@@ -20,13 +23,16 @@ public class ServerContextPrivate implements Context{
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private LimitedQueue<Packet> queue = new LimitedQueue<>(20);
 	final private Server server;
-	private final PacketReader packetReader = new PacketReader();
+	private Frame pck;
+	private ServerPrivateFrameVisitor visitor;
+	private final FrameReader frameReader = new FrameReader();
 	private boolean closed = false; 
 
 	public ServerContextPrivate(Server server, SelectionKey key) {
 		this.key = key;
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
+		this.visitor = new ServerPrivateFrameVisitor(server, this);
 	}
 	
 	
@@ -35,22 +41,8 @@ public class ServerContextPrivate implements Context{
 		return true;
 	}
 	
-
-	/**
-	  Process an action according to the type of packet. If the client is not
-	 * accepted it must to send firstly a connection request (OPCODE -> 0)
-	 *  System.out.println("CLOSED");
-	 * @param pck
-	 */
-	private void processPacket(Packet pck) {
-		switch (pck.getOpCode()) {
-		case 4:
-			server.broadcast(pck);
-			// public message -> broadcast into all connected client contextqueue
-			break;
-		default:
-			silentlyClose();
-		}
+	private void treatFrame(Frame frame) {
+		frame.accept(visitor);
 	}
 
 	/**
@@ -61,10 +53,11 @@ public class ServerContextPrivate implements Context{
 	 *
 	 */
 	public void processIn() {
-		switch (packetReader.process(bbin)) {
+		switch (frameReader.process(bbin)) {
 		case DONE:
-			processPacket(packetReader.get());
-			packetReader.reset();
+			pck = frameReader.get();
+			treatFrame(pck);
+			frameReader.reset();
 			break;
 		case REFILL:
 			return;
