@@ -22,20 +22,31 @@ public class ServerFrameVisitor implements FrameVisitor{
 
 	private Server server;
 	private ServerContext ctx;
-	private ServerContextPrivate pctx;
 	private final SelectionKey key;
-	private boolean accepted = false;
+	private boolean acceptedPublicConnection = false;
+	private boolean acceptedPrivateConnection = false;
 	
 	
 	public ServerFrameVisitor(Server server, ServerContext ctx, boolean accepted, SelectionKey key) {
 		this.server = server;
 		this.ctx = ctx;
-		this.accepted = accepted;
+		this.acceptedPublicConnection = accepted;
 		this.key = key;
 	}
+	
+	public boolean privateConnection() {
+		return acceptedPrivateConnection;
+	}
 
+	private void closeIfNotPublicConnection() {
+		if(!acceptedPublicConnection) {
+			ctx.silentlyClose();
+		}
+	}
+	
 	@Override
 	public void visit(Accept_co_private pck) {
+		closeIfNotPublicConnection();
 		long id = server.generateId();
 		var idPrivate1 = new Id_private(pck.getSender(), pck.getReceiver(), id);
 		var idPrivate2 = new Id_private(pck.getReceiver(), pck.getSender(), id);
@@ -45,25 +56,29 @@ public class ServerFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(Login_private pck) {
-		this.pctx = new ServerContextPrivate(server, key);
+		acceptedPrivateConnection = true;
+//		this.pctx = new ServerContextPrivate(server, key);
 		var establishedPck = new Established_private();
-		ctx.switchKey(pctx);
-		pctx.queueMessage(establishedPck);
+//		server.switchKey(key, pctx);
+		ctx.queueMessage(establishedPck);
 	}
 
 	@Override
 	public void visit(Private_msg pck) {
+		closeIfNotPublicConnection();
 		ctx.unicastOrUnknow(pck);
 	}
 
 	@Override
 	public void visit(Public_msg pck) {
+		closeIfNotPublicConnection();
 		System.out.println("Visit server visitor " + pck.getSender() + " " + pck.getMessage());
 		server.broadcast(pck);		
 	}
 
 	@Override
 	public void visit(Refusal_co_private pck) {
+		closeIfNotPublicConnection();
 		if (!server.unicast(pck)) {
 			var unknown_user = new Unknown_user();
 			ctx.queueMessage(unknown_user);
@@ -73,15 +88,16 @@ public class ServerFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(Request_co_private pck) {
+		closeIfNotPublicConnection();
 		ctx.askPrivateConnection(pck);		
 	}
-
+	
 
 	@Override
 	public void visit(Request_co_server pck) {
 		System.out.println("REQUEST CO SERVER: " + pck.getSender());
 		ctx.identificationProcess(pck.getSender());
-		accepted = true;
+		acceptedPublicConnection = true;
 	}
  
 }

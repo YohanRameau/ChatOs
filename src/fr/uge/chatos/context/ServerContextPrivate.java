@@ -76,6 +76,7 @@ public class ServerContextPrivate implements Context{
 	 * @param msg
 	 */
 	public void queueMessage(Frame msg) {
+		System.out.println("SERVERCONTEXTPRIVATE queuemessage");
 		queue.add(msg.encode());
 		processOut();
 		updateInterestOps();
@@ -111,10 +112,12 @@ public class ServerContextPrivate implements Context{
 
 	public void updateInterestOps() {
 		var newInterestOps = 0;
+		System.out.println("BBOUT: " + bbout);
 		if (!closed && bbin.hasRemaining()) {
 			newInterestOps |= SelectionKey.OP_READ;
 		}
 		if (bbout.position() != 0) {
+			System.out.println("SERVERCONTEXTPRIVATE ready write");
 			newInterestOps |= SelectionKey.OP_WRITE;
 		}
 		if (newInterestOps == 0) {
@@ -159,6 +162,7 @@ public class ServerContextPrivate implements Context{
 	 */
 	@Override
 	public void doWrite() throws IOException {
+		System.out.println("Do write by server context private ");
 		bbout.flip();
 		sc.write(bbout);
 		bbout.compact();

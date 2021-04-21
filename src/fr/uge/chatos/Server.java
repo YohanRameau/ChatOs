@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.ServerContext;
+import fr.uge.chatos.context.ServerContextPrivate;
 import fr.uge.chatos.frametypes.SendToAll;
 import fr.uge.chatos.frametypes.SendToOne;
 
@@ -62,6 +63,7 @@ public class Server {
 		}
 	}
 
+	
 	public long generateId() {
 		return privateConnectionCompt.getAndIncrement();
 	}
@@ -128,7 +130,7 @@ public class Server {
 	 */
 	public void broadcast(SendToAll packet) {
 		for (var key : selector.keys()) {
-			var context = (Context) key.attachment();
+			var context = (ServerContext) key.attachment();
 			if (context == null || context.privateConnection() == true) {
 				continue;
 			}
@@ -226,6 +228,11 @@ public class Server {
 			} else {
 				SocketChannel sc = (SocketChannel) channel;
 				System.out.println("\tKey for Client " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
+				if(key.attachment() != null ) {
+					System.out.println("\tAttachment Type: " + key.attachment().getClass());
+				} else {
+					System.out.println("\tNo attachment");
+				}
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Scanner;
@@ -36,6 +37,7 @@ public class Client {
 	private final InetSocketAddress serverAddress;
 	private final String login;
 	private final Thread console;
+	private final HashSet<String> requesters = new HashSet<>();
 	private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
 	private final Map<String, PrivateClientContext> privateConnectionMap = new HashMap<>();
 	private ClientContext mainContext;
@@ -83,6 +85,27 @@ public class Client {
 
 	//////////////////// Main Thread ////////////////////
 
+	public void addPrivateRequester(String login) {
+		if(this.login.equals(login)) {
+			throw new IllegalStateException("Two clients can not have the same login.");
+		}
+		if(requesters.contains(login)) {
+			throw new IllegalStateException(login + " have already a private connection with you.");
+		}
+		requesters.add(login);
+	}
+	
+	public void removePrivateRequester(String login) {
+		System.out.println(requesters);
+		if(this.login.equals(login)) {
+			throw new IllegalStateException("Two clients can not have the same login.");
+		}
+		if(!requesters.remove(login)) {
+			throw new IllegalStateException("You cannot remove an inexistant requester.");
+		}
+	}
+	
+	
 	/**
 	 * Encode a public message into a ByteBuffer and transfer it on the server
 	 * context.
@@ -114,37 +137,63 @@ public class Client {
 		mainContext.queueMessage(new Private_msg(login, tokens[0], tokens[1]));
 	}
 
+	
+	private void queuePrivateConnectionMessage(String login, String message) {
+		var pctx = privateConnectionMap.get(login);
+		if(pctx == null) {
+			System.out.println("You don't have a private connection with " + login);
+		}
+		pctx.queueMessage(new Public_msg(this.login, message));
+	}
+	
 	private void sendPrivateConnexionRequest(String input) {
-		String[] tokens = input.split(" ", 2);
+		String[] tokens = input.split(" ");
 		if (tokens.length != 1 && tokens.length != 2) {
 			System.out.println(
 					"Parsing error: the input have a bad format. /login message for private connexion request");
 			return;
 		}
-		if (tokens.length == 2 && tokens[0].equals(login)) {
+		if(tokens[0].equals(login)) {
 			System.out.println("YOU CANNOT SEND A PRIVATE request FOR YOURSELF.");
+			return;
+		}
+		if (tokens.length == 2) {
+			System.out.println("You want write " + tokens[1] + " for " + tokens[0] + " since private connection ?");
+			queuePrivateConnectionMessage(tokens[0], tokens[1]);
 			return;
 		}
 		mainContext.queueMessage(new Request_co_private(login, tokens[0]));
 	}
+	
 
 	private void sendPrivateConnexionAcceptance(String input) {
 		String[] tokens = input.split(" ", 2);
+		if(!requesters.contains(tokens[1])) {
+			System.out.println(tokens[1] + " don't ask you for a private connection.");
+			return;
+		}
 		mainContext.queueMessage(new Accept_co_private(login, tokens[1]));
 	}
 
 	private void sendPrivateConnexionRefusal(String input) {
 		String[] tokens = input.split(" ", 2);
+		if(!requesters.contains(tokens[1])) {
+			System.out.println(tokens[1] + " don't ask you for a private connection.");
+			
+			return;
+		}
 		mainContext.queueMessage(new Refusal_co_private(login, tokens[1]));
 	}
+	
 
-	public void initializePrivateConnection(long id) throws IOException {
+	public void initializePrivateConnection(long id, String receiver) throws IOException {
 		SocketChannel privateSc = SocketChannel.open();
 		privateSc.configureBlocking(false);
 		var key = privateSc.register(selector, SelectionKey.OP_CONNECT);
-		var ctx = new PrivateClientContext(key, login + 1, this, id);
+		var ctx = new PrivateClientContext(key, receiver, this, id);
 		key.attach(ctx);
 		privateSc.connect(serverAddress);
+		privateConnectionMap.put(receiver, ctx);
 	}
 	
 	public void registerLogin(String login, PrivateClientContext ctx){

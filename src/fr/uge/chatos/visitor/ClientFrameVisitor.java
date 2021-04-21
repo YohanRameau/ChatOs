@@ -16,12 +16,14 @@ import fr.uge.chatos.frametypes.Request_co_private;
 import fr.uge.chatos.frametypes.Unknown_user;
 
 public class ClientFrameVisitor implements FrameVisitor{
-
+	
+	private final String login;
 	private Client client;
 	private ClientContext ctx;
 	private boolean accepted = false;
 
-	public ClientFrameVisitor(Client client ,ClientContext ctx) {
+	public ClientFrameVisitor(String login, Client client ,ClientContext ctx) {
+		this.login = login;
 		this.client = client;
 		this.ctx = ctx;
 	}
@@ -65,7 +67,7 @@ public class ClientFrameVisitor implements FrameVisitor{
 		System.out.println("User " + pck.getSender() + " and User " + pck.getReceiver()
 		+ " have a private connection now with id " + pck.getId());
 		try {
-			client.initializePrivateConnection(pck.getId());
+			client.initializePrivateConnection(pck.getId(), pck.getSender());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 		}
@@ -74,17 +76,20 @@ public class ClientFrameVisitor implements FrameVisitor{
 	@Override 
 	public void visit(Request_co_private pck){
 		System.out.println(pck.getSender() + " Sent you a private connexion request | Accept (\\yes login) or Decline (\\no login) ?");
+		client.addPrivateRequester(pck.getSender());
 		client.processCommands();
 	}
 	
 	@Override
 	public void visit(Refusal_co_private pck) {
 		System.out.println("The private connexion request has been refused by "+pck.getSender());
+		client.removePrivateRequester(pck.getSender());
 	}
 	
 	@Override
 	public void visit(Accept_co_private pck) {
 		System.out.println("The private connexion request has been accepted by "+pck.getSender());
+		client.removePrivateRequester(pck.getSender());
 	}
 	
 	@Override
@@ -94,6 +99,11 @@ public class ClientFrameVisitor implements FrameVisitor{
 			return;
 		}
 		System.out.println("This user is not present on this server !");		
+	}
+	
+	@Override
+	public void visit(Established_private pck) {
+		System.out.println("NORMAL: Private connection established !");
 	}
  
 	

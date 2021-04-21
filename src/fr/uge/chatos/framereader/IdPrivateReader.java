@@ -114,6 +114,9 @@ public class IdPrivateReader implements Reader<Id_private>{
 	
 	@Override
 	public Id_private get() {
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get but state not DONE.");
+		}
 		return new Id_private(sender, receiver, lr.get());
 	}
 	
@@ -121,6 +124,7 @@ public class IdPrivateReader implements Reader<Id_private>{
 	public void reset() {
 		sr.reset();	
 		lr.reset();
+		state = State.WAITING_SENDER;
 	}	
 	
 }

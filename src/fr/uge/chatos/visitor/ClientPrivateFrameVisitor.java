@@ -20,7 +20,7 @@ public class ClientPrivateFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(Established_private pck) {
-		System.out.println("Private connection established !");
+		System.out.println("PRIVATE: Private connection established !");
 	}
 	
 	@Override

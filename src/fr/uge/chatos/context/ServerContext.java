@@ -45,9 +45,6 @@ public class ServerContext implements Context{
 		return this.login.equals(login);
 	}
 	
-	public void switchKey(ServerContextPrivate server) {
-		key.attach(server);
-	}
 
 	/**
 	 * Process the identification if the client is not already connected. Send an
@@ -72,7 +69,7 @@ public class ServerContext implements Context{
 	
 	@Override
 	public boolean privateConnection() {
-		return false;
+		return visitor.privateConnection();
 	}
 	
 	/**
@@ -237,6 +234,7 @@ public class ServerContext implements Context{
 	 */
 	@Override
 	public void doWrite() throws IOException {
+		System.out.println("DO WRITE SERVER CONTEXT PRIVATE");
 		bbout.flip();
 		sc.write(bbout);
 		bbout.compact();

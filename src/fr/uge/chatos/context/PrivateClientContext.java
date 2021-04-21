@@ -153,6 +153,7 @@ public class PrivateClientContext implements Context {
 	 * @throws IOException
 	 */
 	public void doRead() throws IOException {
+		System.out.println("DO READ PRIVATE CONTEXT");
 		if (sc.read(bbin) == -1) {
 			closed = true;
 			silentlyClose();

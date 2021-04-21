@@ -35,7 +35,7 @@ public class ClientContext implements Context {
 		this.sc = (SocketChannel) key.channel();
 		this.login = login;
 		this.client = client;
-		this.visitor = new ClientFrameVisitor(client ,this);
+		this.visitor = new ClientFrameVisitor(login, client ,this);
 	}
 
 	
@@ -64,7 +64,6 @@ public class ClientContext implements Context {
 				return;
 			case ERROR:
 				closed = true;
-				System.out.println("Error during process of packet.");
 				silentlyClose();
 				return;
 			}
@@ -134,9 +133,9 @@ public class ClientContext implements Context {
 	}
 
 	public void silentlyClose() {
-		System.out.println("Error 404");
 		try {
 			sc.close();
+			System.exit(1);
 		} catch (IOException e) {
 			// ignore exception
 		}
