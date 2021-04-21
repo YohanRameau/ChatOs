@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import fr.uge.chatos.packetreader.Packet;
+import fr.uge.chatos.framereader.Packet;
 
 public class BuildPacket {
 

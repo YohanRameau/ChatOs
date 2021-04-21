@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import fr.uge.chatos.visitor.FrameVisitor;
+
 public interface Frame {
 	
 	static final Charset UTF8 = StandardCharsets.UTF_8;

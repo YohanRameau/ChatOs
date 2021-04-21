@@ -5,15 +5,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-import fr.uge.chatos.ClientList;
 import fr.uge.chatos.Server;
 import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.core.ServerFrameVisitor;
-import fr.uge.chatos.core.ServerPrivateFrameVisitor;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.FrameReader;
+import fr.uge.chatos.framereader.FrameReader;
+import fr.uge.chatos.framereader.Packet;
+import fr.uge.chatos.visitor.ServerPrivateFrameVisitor;
 
 public class ServerContextPrivate implements Context{
 	private static int BUFFER_SIZE = 1024;

@@ -7,11 +7,11 @@ import java.nio.channels.SocketChannel;
 
 import fr.uge.chatos.Client;
 import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.core.ClientFrameVisitor;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.frame.Public_msg;
-import fr.uge.chatos.packetreader.FrameReader;
+import fr.uge.chatos.framereader.FrameReader;
+import fr.uge.chatos.frametypes.Public_msg;
+import fr.uge.chatos.visitor.ClientPrivateFrameVisitor;
 
 public class PrivateClientContext implements Context {
 	static private int BUFFER_SIZE = 10_000;
@@ -23,7 +23,7 @@ public class PrivateClientContext implements Context {
 	final private Client client;
 	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
 	final private FrameReader frameReader = new FrameReader();
-	private ClientFrameVisitor visitor = new ClientFrameVisitor(this);
+	private ClientPrivateFrameVisitor visitor;
 	final private String login;
 	private Frame pck;
 	private final long id;
@@ -35,6 +35,7 @@ public class PrivateClientContext implements Context {
 		this.login = login;
 		this.client = client;
 		this.id = id;
+		this.visitor = new ClientPrivateFrameVisitor(client, this);
 	}
 
 	private void treatFrame(Frame frame) {
@@ -73,7 +74,7 @@ public class PrivateClientContext implements Context {
 		queueMessage(bb);
 	}
 
-	void displayMessage(Public_msg pck) {
+	public void displayMessage(Public_msg pck) {
 		if (pck.getSender().equals(login)) {
 			System.out.println("Me: " + pck.getMessage());
 			return;

@@ -10,12 +10,12 @@ import fr.uge.chatos.ClientList;
 import fr.uge.chatos.Server;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.core.ServerFrameVisitor;
-import fr.uge.chatos.frame.Acceptance;
-import fr.uge.chatos.frame.Refusal;
-import fr.uge.chatos.frame.SendToOne;
-import fr.uge.chatos.frame.Unknown_user;
-import fr.uge.chatos.packetreader.FrameReader;
+import fr.uge.chatos.framereader.FrameReader;
+import fr.uge.chatos.frametypes.Acceptance;
+import fr.uge.chatos.frametypes.Refusal;
+import fr.uge.chatos.frametypes.SendToOne;
+import fr.uge.chatos.frametypes.Unknown_user;
+import fr.uge.chatos.visitor.ServerFrameVisitor;
 
 public class ServerContext implements Context{
 	private static int BUFFER_SIZE = 1024;

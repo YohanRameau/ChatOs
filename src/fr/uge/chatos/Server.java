@@ -3,14 +3,10 @@ package fr.uge.chatos;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -18,12 +14,8 @@ import java.util.logging.Logger;
 
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.ServerContext;
-import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.core.Frame;
-import fr.uge.chatos.frame.SendToAll;
-import fr.uge.chatos.frame.SendToOne;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.FrameReader;
+import fr.uge.chatos.frametypes.SendToAll;
+import fr.uge.chatos.frametypes.SendToOne;
 
 public class Server {
 

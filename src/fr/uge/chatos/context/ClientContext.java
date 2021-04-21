@@ -7,11 +7,11 @@ import java.nio.channels.SocketChannel;
 
 import fr.uge.chatos.Client;
 import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.core.ClientFrameVisitor;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.frame.Public_msg;
-import fr.uge.chatos.packetreader.FrameReader;
+import fr.uge.chatos.framereader.FrameReader;
+import fr.uge.chatos.frametypes.Public_msg;
+import fr.uge.chatos.visitor.ClientFrameVisitor;
 
 public class ClientContext implements Context {
 	
