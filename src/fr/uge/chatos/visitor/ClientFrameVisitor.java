@@ -33,15 +33,6 @@ public class ClientFrameVisitor implements FrameVisitor{
 	}
 
 	@Override
-	public void visit(Established_private pck) {
-		if (!accepted) {
-			ctx.silentlyClose();
-			return;
-		}
-		System.out.println("Private connection established !");
-	}
-
-	@Override
 	public void visit(Public_msg pck) {
 		if (!accepted) {
 			ctx.silentlyClose();
@@ -61,11 +52,9 @@ public class ClientFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(Refusal pck) {
-		if (!accepted) {
-			ctx.silentlyClose();
-			return;
-		}
-		System.out.println("Connection refused.");	
+		System.out.println("Connection refused.");
+		ctx.silentlyClose();
+		System.exit(0);
 	}
 
 	public void visit(Id_private pck) {

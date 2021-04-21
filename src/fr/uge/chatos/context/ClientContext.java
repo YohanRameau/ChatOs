@@ -11,6 +11,7 @@ import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
 import fr.uge.chatos.framereader.FrameReader;
 import fr.uge.chatos.frametypes.Public_msg;
+import fr.uge.chatos.frametypes.Request_co_server;
 import fr.uge.chatos.visitor.ClientFrameVisitor;
 
 public class ClientContext implements Context {
@@ -85,8 +86,8 @@ public class ClientContext implements Context {
 	 *
 	 * @param bb
 	 */
-	public void queueMessage(ByteBuffer bb) {
-		queue.add(bb);
+	public void queueMessage(Frame msg) {
+		queue.add(msg.encode());
 		processOut();
 		updateInterestOps();
 	}
@@ -181,7 +182,8 @@ public class ClientContext implements Context {
 			return;
 		}
 		key.interestOps(SelectionKey.OP_WRITE);
-		queueMessage(BuildPacket.request_co_server(login));
+		var pck = new Request_co_server(login);
+		queueMessage(pck);
 		updateInterestOps();
 	}
 

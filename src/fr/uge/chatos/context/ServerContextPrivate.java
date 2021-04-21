@@ -19,7 +19,7 @@ public class ServerContextPrivate implements Context{
 	final private SocketChannel sc;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-	final private LimitedQueue<Packet> queue = new LimitedQueue<>(20);
+	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
 	final private Server server;
 	private Frame pck;
 	private ServerPrivateFrameVisitor visitor;
@@ -31,11 +31,13 @@ public class ServerContextPrivate implements Context{
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
 		this.visitor = new ServerPrivateFrameVisitor(server, this);
+		System.out.println("Server Private has been bon vous");
 	}
 	
 	
 	@Override
 	public boolean privateConnection() {
+		System.out.println("Server context private connection bon vous soltez");
 		return true;
 	}
 	
@@ -73,8 +75,8 @@ public class ServerContextPrivate implements Context{
 	 *
 	 * @param msg
 	 */
-	public void queueMessage(Packet msg) {
-		queue.add(msg);
+	public void queueMessage(Frame msg) {
+		queue.add(msg.encode());
 		processOut();
 		updateInterestOps();
 	}
@@ -89,8 +91,7 @@ public class ServerContextPrivate implements Context{
 			if (queue.isEmpty()) {
 				return;
 			}
-			var pck = queue.peek();
-			var bb = BuildPacket.encode(pck);
+			var bb = queue.peek();
 			if (bbout.remaining() < bb.remaining()) {
 				return;
 			}

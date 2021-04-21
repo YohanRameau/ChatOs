@@ -128,7 +128,7 @@ public class Server {
 	 */
 	public void broadcast(SendToAll packet) {
 		for (var key : selector.keys()) {
-			var context = (ServerContext) key.attachment();
+			var context = (Context) key.attachment();
 			if (context == null || context.privateConnection() == true) {
 				continue;
 			}

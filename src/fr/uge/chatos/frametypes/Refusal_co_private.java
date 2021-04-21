@@ -7,9 +7,6 @@ import fr.uge.chatos.core.PacketTypes;
 import fr.uge.chatos.visitor.FrameVisitor;
 
 public class Refusal_co_private extends SendToOne{
-
-	private String sender;
-	private String receiver;
 	
 	public Refusal_co_private(String sender, String receiver) {
 		super(sender, receiver);
@@ -22,8 +19,8 @@ public class Refusal_co_private extends SendToOne{
 
 	@Override
 	public ByteBuffer encode() {
-		var exp = BuildPacket.encodeString(sender);
-		var rec = BuildPacket.encodeString(receiver);
+		var exp = BuildPacket.encodeString(super.getSender());
+		var rec = BuildPacket.encodeString(super.getReceiver());
 		int bbSize = exp.remaining() + rec.remaining() + Byte.BYTES;
 		if (bbSize > Byte.BYTES + 2 * Integer.BYTES + 2 * MAX_NICKNAME_SIZE) {
 			throw new IllegalStateException("Login too long to be send on the server.");

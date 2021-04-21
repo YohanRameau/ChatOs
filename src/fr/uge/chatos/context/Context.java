@@ -2,6 +2,8 @@ package fr.uge.chatos.context;
 
 import java.io.IOException;
 
+import fr.uge.chatos.core.Frame;
+
 public interface Context {
 	
 	void processOut();
@@ -16,5 +18,6 @@ public interface Context {
 	default public boolean privateConnection() {
 		return false;
 	}
+	void queueMessage(Frame msg);
 
 }

@@ -15,11 +15,9 @@ public class ServerPrivateFrameVisitor implements FrameVisitor{
 		this.ctx = ctx;
 	}
 
-
 	@Override
 	public void visit(Public_msg pck) {
 		server.broadcast(pck);		
 	}
-
  
 }

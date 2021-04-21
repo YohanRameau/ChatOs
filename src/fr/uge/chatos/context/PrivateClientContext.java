@@ -10,6 +10,7 @@ import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
 import fr.uge.chatos.framereader.FrameReader;
+import fr.uge.chatos.frametypes.Login_private;
 import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.visitor.ClientPrivateFrameVisitor;
 
@@ -70,16 +71,16 @@ public class PrivateClientContext implements Context {
 	}
 
 	private void sendLoginPrivate() throws IOException {
-		var bb = BuildPacket.loginPrivate(id);
-		queueMessage(bb);
+		var pck = new Login_private(id);
+		queueMessage(pck);
 	}
 
 	public void displayMessage(Public_msg pck) {
 		if (pck.getSender().equals(login)) {
-			System.out.println("Me: " + pck.getMessage());
+			System.out.println("(Private connexion) Me: " + pck.getMessage());
 			return;
 		} else {
-			System.out.println(pck.getSender() + ": " + pck.getMessage());
+			System.out.println("(Private connexion) "+pck.getSender() + ": " + pck.getMessage());
 			return;
 		}
 	}
@@ -89,8 +90,8 @@ public class PrivateClientContext implements Context {
 	 *
 	 * @param bb
 	 */
-	private void queueMessage(ByteBuffer bb) {
-		queue.add(bb);
+	public void queueMessage(Frame msg) {
+		queue.add(msg.encode());
 		processOut();
 		updateInterestOps();
 	}

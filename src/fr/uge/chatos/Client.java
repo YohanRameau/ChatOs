@@ -21,6 +21,11 @@ import fr.uge.chatos.context.ClientContext;
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.PrivateClientContext;
 import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.frametypes.Accept_co_private;
+import fr.uge.chatos.frametypes.Private_msg;
+import fr.uge.chatos.frametypes.Public_msg;
+import fr.uge.chatos.frametypes.Refusal_co_private;
+import fr.uge.chatos.frametypes.Request_co_private;
 
 public class Client {
 
@@ -36,7 +41,7 @@ public class Client {
 	private ClientContext mainContext;
 
 	enum MessageType {
-		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE, ACCEPT, REFUSE
+		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE, ACCEPT, REFUSE, ERROR
 	}
 
 	public Client(String login, InetSocketAddress serverAddress) throws IOException {
@@ -85,9 +90,7 @@ public class Client {
 	 * @param message
 	 */
 	private void sendPublicMessage(String message) {
-
-		var bb = BuildPacket.public_msg(login, message);
-		mainContext.queueMessage(bb);
+		mainContext.queueMessage(new Public_msg(login, message));
 	}
 
 	/**
@@ -108,8 +111,7 @@ public class Client {
 			System.out.println("You cannot send a private message for youself");
 			return;
 		}
-		var bb = BuildPacket.private_msg(login, tokens[0], tokens[1]);
-		mainContext.queueMessage(bb);
+		mainContext.queueMessage(new Private_msg(login, tokens[0], tokens[1]));
 	}
 
 	private void sendPrivateConnexionRequest(String input) {
@@ -123,20 +125,17 @@ public class Client {
 			System.out.println("YOU CANNOT SEND A PRIVATE request FOR YOURSELF.");
 			return;
 		}
-		var bb = BuildPacket.request_co_private(login, tokens[0]);
-		mainContext.queueMessage(bb);
+		mainContext.queueMessage(new Request_co_private(login, tokens[0]));
 	}
 
 	private void sendPrivateConnexionAcceptance(String input) {
 		String[] tokens = input.split(" ", 2);
-		var bb = BuildPacket.accept_co_private(login, tokens[1]);
-		mainContext.queueMessage(bb);
+		mainContext.queueMessage(new Accept_co_private(login, tokens[1]));
 	}
 
 	private void sendPrivateConnexionRefusal(String input) {
 		String[] tokens = input.split(" ", 2);
-		var bb = BuildPacket.refuse_co_private(login, tokens[1]);
-		mainContext.queueMessage(bb);
+		mainContext.queueMessage(new Refusal_co_private(login, tokens[1]));
 	}
 
 	public void initializePrivateConnection(long id) throws IOException {
@@ -168,7 +167,7 @@ public class Client {
 			case '\\':
 				String[] tokens = msg.split(" ", 2);
 				if (tokens.length != 2) {
-					throw new IllegalStateException("Parsing error");
+					return MessageType.ERROR;
 				}
 				switch (tokens[0].toLowerCase()) {
 				case "\\yes":
@@ -210,6 +209,9 @@ public class Client {
 			break;
 		case REFUSE:
 			sendPrivateConnexionRefusal(msg.substring(1));
+			break;
+		case ERROR:
+			System.out.println("Unknown command");
 			break;
 		}
 	}

@@ -30,8 +30,7 @@ public class ServerContext implements Context{
 	private final ArrayList<String> requesters = new ArrayList<String>();
 	private boolean closed = false;
 	private ServerFrameVisitor visitor;
-	private Frame pck;
-	private boolean privateConnection; 
+	private Frame pck; 
 	private String login;
 
 	public ServerContext(Server server, SelectionKey key, ClientList clientlist) {
@@ -39,11 +38,15 @@ public class ServerContext implements Context{
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
 		this.clientList = clientlist;
-		this.visitor = new ServerFrameVisitor(server, this, closed);
+		this.visitor = new ServerFrameVisitor(server, this, closed, key);
 	}
 	
 	public boolean isClient(String login) {
 		return this.login.equals(login);
+	}
+	
+	public void switchKey(ServerContextPrivate server) {
+		key.attach(server);
 	}
 
 	/**
@@ -69,7 +72,7 @@ public class ServerContext implements Context{
 	
 	@Override
 	public boolean privateConnection() {
-		return privateConnection;
+		return false;
 	}
 	
 	/**

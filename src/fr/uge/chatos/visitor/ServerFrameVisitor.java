@@ -1,7 +1,10 @@
 package fr.uge.chatos.visitor;
 
+import java.nio.channels.SelectionKey;
+
 import fr.uge.chatos.Server;
 import fr.uge.chatos.context.ServerContext;
+import fr.uge.chatos.context.ServerContextPrivate;
 import fr.uge.chatos.frametypes.Accept_co_private;
 import fr.uge.chatos.frametypes.Acceptance;
 import fr.uge.chatos.frametypes.Established_private;
@@ -19,13 +22,16 @@ public class ServerFrameVisitor implements FrameVisitor{
 
 	private Server server;
 	private ServerContext ctx;
+	private ServerContextPrivate pctx;
+	private final SelectionKey key;
 	private boolean accepted = false;
 	
 	
-	public ServerFrameVisitor(Server server, ServerContext ctx, boolean accepted) {
+	public ServerFrameVisitor(Server server, ServerContext ctx, boolean accepted, SelectionKey key) {
 		this.server = server;
 		this.ctx = ctx;
 		this.accepted = accepted;
+		this.key = key;
 	}
 
 	@Override
@@ -38,15 +44,11 @@ public class ServerFrameVisitor implements FrameVisitor{
 	}
 
 	@Override
-	public void visit(Established_private pck) {
-		System.out.println("Private connection established !");
-	}
-
-
-	@Override
 	public void visit(Login_private pck) {
+		this.pctx = new ServerContextPrivate(server, key);
 		var establishedPck = new Established_private();
-		ctx.queueMessage(establishedPck);
+		ctx.switchKey(pctx);
+		pctx.queueMessage(establishedPck);
 	}
 
 	@Override
