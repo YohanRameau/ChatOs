@@ -5,6 +5,7 @@ import fr.uge.chatos.frametypes.Acceptance;
 import fr.uge.chatos.frametypes.Established_private;
 import fr.uge.chatos.frametypes.Id_private;
 import fr.uge.chatos.frametypes.Login_private;
+import fr.uge.chatos.frametypes.PrivateConnectionMessage;
 import fr.uge.chatos.frametypes.Private_msg;
 import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.frametypes.Refusal;
@@ -48,6 +49,10 @@ public interface FrameVisitor {
 		return;
 	};
 	public default void visit(Unknown_user unknown_user) {
+		return;
+	};
+	
+	public default void visit(PrivateConnectionMessage unknown_user) {
 		return;
 	};
 }

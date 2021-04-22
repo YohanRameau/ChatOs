@@ -37,18 +37,20 @@ public class LoginPrivateReader implements Reader<Login_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST LOGIN PRIVATE ");
-
 		return getLoginPrivate(bb);
 	}
 	
 	@Override
 	public Login_private get() {
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get but state is not Done.");
+		}
 		return new Login_private(lr.get());
 	}
 	
 	@Override
 	public void reset() {
+		state = State.WAITING_ID;
 		lr.reset();		
 	}	
 	

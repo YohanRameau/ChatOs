@@ -17,6 +17,7 @@ public class ClientList {
 		}
 		return false;
 	}
+
 	
 	public void add(String client, SocketChannel sc) {
 		clients.putIfAbsent(client, sc);

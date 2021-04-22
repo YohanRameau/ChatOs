@@ -7,6 +7,7 @@ import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -15,23 +16,24 @@ import java.util.logging.Logger;
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.ServerContext;
 import fr.uge.chatos.context.ServerContextPrivate;
+import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.frametypes.SendToAll;
 import fr.uge.chatos.frametypes.SendToOne;
 
 public class Server {
 
-	static class PrivateConnectionInfo {
+	public static class PrivateConnectionInfo {
 		private final long id;
-		private final InetSocketAddress firstAddress;
-		private final InetSocketAddress secondAddress;
-		private Context firstContext;
-		private Context secondContext;
+		private ServerContext firstContext;
+		private ServerContext secondContext;
 
-		public PrivateConnectionInfo(long id, InetSocketAddress frst, InetSocketAddress scnd) {
+		public PrivateConnectionInfo(long id, ServerContext frst, ServerContext scnd) {
 			this.id = id;
-			this.firstAddress = frst;
-			this.secondAddress = scnd;
+			this.firstContext = frst;
+			this.secondContext = scnd;
 		}
+		
+		
 	}
 
 	static private final int BUFFER_SIZE = 1_024;
@@ -42,7 +44,7 @@ public class Server {
 	private final Selector selector;
 	private final ClientList clientList = new ClientList();
 
-	private final Map<Long, PrivateConnectionInfo> PrivateConnectionMap = new HashMap<>();
+	private final Map<Long, PrivateConnectionInfo> privateConnectionMap = new HashMap<>();
 
 	public Server(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -62,10 +64,28 @@ public class Server {
 			}
 		}
 	}
+	
+	// TODO ClientPrivateInfo -> Pas mal de méthode peut etre faudra creer une classe
 
 	
 	public long generateId() {
 		return privateConnectionCompt.getAndIncrement();
+	}
+	
+	public Optional<PrivateConnectionInfo> getPrivateConnectionInfo(long id) {
+		return Optional.ofNullable(privateConnectionMap.get(id));
+	}
+	
+	public void registerPrivateConnection(long id, String login1, String login2) {
+		// TODO Trouver les deux context (context1 et context2) en fonctions des deux logins
+	    // creer un nouvel objet PrivateConnectionInfo à partir des deux ocntext et de l'id
+	}
+	
+	public void sendToOtherClient(long id, ServerContext context, Frame frame) {
+		// TODO Retrouver le privateClientInfo à partir de l'id
+		// Determiner lequel des deux context et le sender et lequel est le receiver (context == privatecontextinfo.context1 ou 2)
+		// mettre la frame dans le queue message du context receiver
+		// ne pas oublier les vérifications (est ce que context est l'un des deux context ?)
 	}
 
 	/**

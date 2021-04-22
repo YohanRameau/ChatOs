@@ -12,7 +12,8 @@ public enum PacketTypes {
 	REFUSAL_CO_PRIVATE((byte) 8),
 	ID_PRIVATE((byte) 9),
 	LOGIN_PRIVATE((byte) 10),
-	ESTABLISHED_PRIVATE((byte) 11);
+	ESTABLISHED_PRIVATE((byte) 11),
+	PRIVATE_CO_MSG((byte) 12);
 	
 	public final byte opCode;
 	

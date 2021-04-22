@@ -26,6 +26,7 @@ public class FrameReader implements Reader<Frame> {
 	private final RefusalReader rr = new RefusalReader();
 	private final RequestCoPrivateReader rcprr = new RequestCoPrivateReader();
 	private final UnknownUserReader uur = new UnknownUserReader();
+	private final PrivateConnectionMessageReader pcmr = new PrivateConnectionMessageReader();
 	private final RequestCoServerReader rcsr;
 
 	public enum State {
@@ -69,6 +70,8 @@ public class FrameReader implements Reader<Frame> {
 			return lpr.process(bb);
 		case ESTABLISHED_PRIVATE:
 			return epr.process(bb);
+		case PRIVATE_CO_MSG:
+			return pcmr.process(bb);
 		default:
 			state = State.ERROR;
 			return ProcessStatus.ERROR;
@@ -125,6 +128,8 @@ public class FrameReader implements Reader<Frame> {
 			return lpr.get();
 		case ESTABLISHED_PRIVATE:
 			return epr.get();
+		case PRIVATE_CO_MSG:
+			return pcmr.get();
 		default:
 			return null;
 		}
@@ -137,28 +142,43 @@ public class FrameReader implements Reader<Frame> {
 		switch (opcode) {
 		case REQUEST_CO_SERVER:
 			rcsr.reset();
+			break;
 		case ACCEPTANCE:
 			ar.reset();
+			break;
 		case REFUSAL:
 			rr.reset();
+			break;
 		case REQUEST_CO_PRIVATE:
 			rcprr.reset();
+			break;
 		case PUBLIC_MSG:
 			pmr.reset();
+			break;
 		case PRIVATE_MSG:
 			prmr.reset();
+			break;
 		case UNKNOWN_USER:
 			uur.reset();
+			break;
 		case ACCEPT_CO_PRIVATE:
 			acpr.reset();
+			break;
 		case REFUSAL_CO_PRIVATE:
 			recpr.reset();
+			break;
 		case ID_PRIVATE:
 			ipr.reset();
+			break;
 		case LOGIN_PRIVATE:
 			lpr.reset();
+			break;
 		case ESTABLISHED_PRIVATE:
 			epr.reset();
+			break;
+		case PRIVATE_CO_MSG:
+			pcmr.reset();
+			break;
 		default:
 			;
 		}

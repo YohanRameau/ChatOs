@@ -23,6 +23,7 @@ import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.PrivateClientContext;
 import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.frametypes.Accept_co_private;
+import fr.uge.chatos.frametypes.PrivateConnectionMessage;
 import fr.uge.chatos.frametypes.Private_msg;
 import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.frametypes.Refusal_co_private;
@@ -137,15 +138,27 @@ public class Client {
 		mainContext.queueMessage(new Private_msg(login, tokens[0], tokens[1]));
 	}
 
-	
-	private void queuePrivateConnectionMessage(String login, String message) {
+	/**
+	 * 
+	 * @param login
+	 * @param message
+	 * @return
+	 */
+	private boolean queuePrivateConnectionMessage(String login, String message) {
 		var pctx = privateConnectionMap.get(login);
 		if(pctx == null) {
-			System.out.println("You don't have a private connection with " + login);
+			System.out.println("You don't have a private connection with " + login );
+			return false;
 		}
-		pctx.queueMessage(new Public_msg(this.login, message));
+		pctx.queueMessage(new PrivateConnectionMessage(message, pctx.getId()));
+		return true;
 	}
 	
+	
+	/**
+	 * 
+	 * @param input
+	 */
 	private void sendPrivateConnexionRequest(String input) {
 		String[] tokens = input.split(" ");
 		if (tokens.length != 1 && tokens.length != 2) {
@@ -157,10 +170,11 @@ public class Client {
 			System.out.println("YOU CANNOT SEND A PRIVATE request FOR YOURSELF.");
 			return;
 		}
+		
 		if (tokens.length == 2) {
-			System.out.println("You want write " + tokens[1] + " for " + tokens[0] + " since private connection ?");
-			queuePrivateConnectionMessage(tokens[0], tokens[1]);
-			return;
+			if(queuePrivateConnectionMessage(tokens[0], tokens[1])) {
+				return;
+			}	
 		}
 		mainContext.queueMessage(new Request_co_private(login, tokens[0]));
 	}
@@ -185,7 +199,13 @@ public class Client {
 		mainContext.queueMessage(new Refusal_co_private(login, tokens[1]));
 	}
 	
-
+	
+	/**
+	 * 
+	 * @param id
+	 * @param receiver
+	 * @throws IOException
+	 */
 	public void initializePrivateConnection(long id, String receiver) throws IOException {
 		SocketChannel privateSc = SocketChannel.open();
 		privateSc.configureBlocking(false);
@@ -196,6 +216,12 @@ public class Client {
 		privateConnectionMap.put(receiver, ctx);
 	}
 	
+	
+	/**
+	 * 
+	 * @param login
+	 * @param ctx
+	 */
 	public void registerLogin(String login, PrivateClientContext ctx){
 		privateConnectionMap.put(login, ctx);
 	}

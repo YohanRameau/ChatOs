@@ -14,6 +14,10 @@ public class Unknown_user implements Frame{
 	public void accept(FrameVisitor visitor) {
 		visitor.visit(this);
 	}
+	
+	public Unknown_user(String login) {
+		sender = login;
+	}
 
 	@Override
 	public ByteBuffer encode() {

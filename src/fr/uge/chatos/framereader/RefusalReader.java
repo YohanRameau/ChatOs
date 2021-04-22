@@ -59,11 +59,15 @@ public class RefusalReader implements Reader<Refusal>{
 	
 	@Override
 	public Refusal get() {
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get but state is not Done.");
+		}
 		return new Refusal(sender);
 	}
 	
 	@Override
 	public void reset() {
+		state = State.WAITING_SENDER;
 		sr.reset();		
 	}	
 	

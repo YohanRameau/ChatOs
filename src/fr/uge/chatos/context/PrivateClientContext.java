@@ -43,6 +43,10 @@ public class PrivateClientContext implements Context {
 		frame.accept(visitor);
 	}
 	
+	public long getId() {
+		return id;
+	}
+	
 	/**
 	 * Process the content of bbin
 	 *

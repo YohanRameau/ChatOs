@@ -58,11 +58,15 @@ public class AcceptanceReader implements Reader<Acceptance>{
 	
 	@Override
 	public Acceptance get() {
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get but state is not Done.");
+		}
 		return new Acceptance(sender);
 	}
 	
 	@Override
 	public void reset() {
+		state = State.WAITING_SENDER;
 		sr.reset();		
 	}	
 	

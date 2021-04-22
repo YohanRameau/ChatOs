@@ -38,11 +38,25 @@ public class ServerContext implements Context{
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
 		this.clientList = clientlist;
-		this.visitor = new ServerFrameVisitor(server, this, closed, key);
+		this.visitor = new ServerFrameVisitor(server, this, key);
 	}
 	
 	public boolean isClient(String login) {
 		return this.login.equals(login);
+	}
+	
+	public void sendPrivatePacket(Frame frame ,long id) {
+		var tmp = server.getPrivateConnectionInfo(id);
+		if(tmp.isEmpty()) {
+			System.out.println("No private connection with it's id");
+			silentlyClose();
+			return;
+		}
+		var pci = tmp.get();
+		// server.sendToOtherCLient(id, this, frame)
+		// TODO Finir les méthodes de PrivateConnectionInfo
+		
+		
 	}
 	
 
@@ -79,7 +93,7 @@ public class ServerContext implements Context{
 	public void unicastOrUnknow(SendToOne pck) {
 		if (!server.unicast(pck)) {
 			
-			var unknown_user = new Unknown_user();
+			var unknown_user = new Unknown_user(pck.getSender());
 			queueMessage(unknown_user);
 			return;
 		};
@@ -94,7 +108,7 @@ public class ServerContext implements Context{
 		addRequester(pck.getReceiver());
 		if (!server.privateUnicast(pck)) {
 			System.out.println(pck.getSender() + " didnt ask a private connection before " + pck.getReceiver());
-			var unknown_user = new Unknown_user();
+			var unknown_user = new Unknown_user(pck.getSender());
 			queueMessage(unknown_user);
 			return;
 		};

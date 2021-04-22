@@ -10,6 +10,7 @@ import fr.uge.chatos.frametypes.Acceptance;
 import fr.uge.chatos.frametypes.Established_private;
 import fr.uge.chatos.frametypes.Id_private;
 import fr.uge.chatos.frametypes.Login_private;
+import fr.uge.chatos.frametypes.PrivateConnectionMessage;
 import fr.uge.chatos.frametypes.Private_msg;
 import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.frametypes.Refusal;
@@ -27,22 +28,24 @@ public class ServerFrameVisitor implements FrameVisitor{
 	private boolean acceptedPrivateConnection = false;
 	
 	
-	public ServerFrameVisitor(Server server, ServerContext ctx, boolean accepted, SelectionKey key) {
+	
+	public ServerFrameVisitor(Server server, ServerContext ctx, SelectionKey key) {
 		this.server = server;
 		this.ctx = ctx;
-		this.acceptedPublicConnection = accepted;
 		this.key = key;
 	}
 	
 	public boolean privateConnection() {
 		return acceptedPrivateConnection;
 	}
+	
 
 	private void closeIfNotPublicConnection() {
-		if(!acceptedPublicConnection) {
+		if(!acceptedPublicConnection  ) {
 			ctx.silentlyClose();
 		}
 	}
+	
 	
 	@Override
 	public void visit(Accept_co_private pck) {
@@ -79,11 +82,7 @@ public class ServerFrameVisitor implements FrameVisitor{
 	@Override
 	public void visit(Refusal_co_private pck) {
 		closeIfNotPublicConnection();
-		if (!server.unicast(pck)) {
-			var unknown_user = new Unknown_user();
-			ctx.queueMessage(unknown_user);
-			return;
-		}
+		ctx.unicastOrUnknow(pck);
 	}
 
 	@Override
@@ -95,9 +94,16 @@ public class ServerFrameVisitor implements FrameVisitor{
 
 	@Override
 	public void visit(Request_co_server pck) {
-		System.out.println("REQUEST CO SERVER: " + pck.getSender());
 		ctx.identificationProcess(pck.getSender());
 		acceptedPublicConnection = true;
+	}
+	
+	@Override
+	public void visit(PrivateConnectionMessage pck) {
+		if(!privateConnection()) {
+			ctx.silentlyClose();
+		}
+		// TODO 
 	}
  
 }

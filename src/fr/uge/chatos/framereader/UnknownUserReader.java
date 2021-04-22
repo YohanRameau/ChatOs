@@ -58,12 +58,16 @@ public class UnknownUserReader implements Reader<Unknown_user>{
 	
 	@Override
 	public Unknown_user get() {
-		return new Unknown_user();
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get but state is not Done.");
+		}
+		return new Unknown_user(sender);
 	}
 	
 	@Override
 	public void reset() {
-		sr.reset();		
+		state = State.WAITING_SENDER;
+		sr.reset();
 	}	
 	
 }

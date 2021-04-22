@@ -90,11 +90,15 @@ public class RequestCoPrivateReader implements Reader<Request_co_private>{
 	
 	@Override
 	public Request_co_private get() {
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get but state is not Done.");
+		}
 		return new Request_co_private(sender, receiver);
 	}
 	
 	@Override
 	public void reset() {
+		state = State.WAITING_SENDER;
 		sr.reset();		
 	}	
 	

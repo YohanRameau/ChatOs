@@ -90,11 +90,15 @@ public class AcceptCoPrivateReader implements Reader<Accept_co_private>{
 	
 	@Override
 	public Accept_co_private get() {
+		if(state != State.DONE) {
+			throw new IllegalStateException("Get but state is not Done.");
+		}
 		return new Accept_co_private(sender, receiver);
 	}
 	
 	@Override
 	public void reset() {
+		state = State.WAITING_SENDER;
 		sr.reset();		
 	}	
 	
