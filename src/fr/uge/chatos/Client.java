@@ -21,7 +21,6 @@ import java.util.logging.Logger;
 import fr.uge.chatos.context.ClientContext;
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.PrivateClientContext;
-import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.frametypes.Accept_co_private;
 import fr.uge.chatos.frametypes.PrivateConnectionMessage;
 import fr.uge.chatos.frametypes.Private_msg;
@@ -57,6 +56,10 @@ public class Client {
 
 	//////////////////// CONSOLE THREAD ////////////////////
 
+	/**
+	 * Start the Console Thread
+	 */
+	
 	private void consoleRun() {
 		try {
 			var scan = new Scanner(System.in);
@@ -75,8 +78,8 @@ public class Client {
 	/**
 	 * Send a command to the selector via commandQueue and wake it up
 	 *
-	 * @param msg
-	 * @throws InterruptedException
+	 * @param msg to add to the client queue
+	 * @throws InterruptedException if the msg is impossible to add
 	 */
 
 	private void processStandardInput(String msg) throws InterruptedException {
@@ -85,10 +88,16 @@ public class Client {
 	}
 
 	//////////////////// Main Thread ////////////////////
-
+	
+	/**
+	 * Add a requester to the private requester list
+	 *
+	 * @param login of the requester
+	 * @throws IllegalStateException if clients have the same login or the connection is already established
+	 */
 	public void addPrivateRequester(String login) {
 		if(this.login.equals(login)) {
-			throw new IllegalStateException("Two clients can not have the same login.");
+			throw new IllegalStateException("Two clients cannot have the same login.");
 		}
 		if(requesters.contains(login)) {
 			throw new IllegalStateException(login + " have already a private connection with you.");
@@ -96,6 +105,12 @@ public class Client {
 		requesters.add(login);
 	}
 	
+	/**
+	 * Remove a requester from the private requester list
+	 *
+	 * @param login of the requester
+	 * @throws IllegalStateException if clients have the same login or the connection is already established
+	 */
 	public void removePrivateRequester(String login) {
 		System.out.println(requesters);
 		if(this.login.equals(login)) {
@@ -111,7 +126,7 @@ public class Client {
 	 * Encode a public message into a ByteBuffer and transfer it on the server
 	 * context.
 	 * 
-	 * @param message
+	 * @param message to publicly send
 	 */
 	private void sendPublicMessage(String message) {
 		mainContext.queueMessage(new Public_msg(login, message));
@@ -121,7 +136,7 @@ public class Client {
 	 * Encode a private message into a ByteBuffer and transfer it on the server
 	 * context
 	 * 
-	 * @param message
+	 * @param input to parse containing login and private message
 	 */
 	private void sendPrivateMessage(String input) {
 		String[] tokens = input.split(" ", 2);
@@ -139,10 +154,11 @@ public class Client {
 	}
 
 	/**
+	 * Add a private connection message to the client's queue
 	 * 
-	 * @param login
-	 * @param message
-	 * @return
+	 * @param login of the client
+	 * @param message to send
+	 * @return boolean 
 	 */
 	private boolean queuePrivateConnectionMessage(String login, String message) {
 		var pctx = privateConnectionMap.get(login);
@@ -156,14 +172,15 @@ public class Client {
 	
 	
 	/**
+	 * Send a private connection request to another user
 	 * 
-	 * @param input
+	 * @param input to parse containing login and private message 
 	 */
-	private void sendPrivateConnexionRequest(String input) {
+	private void sendPrivateConnectionRequest(String input) {
 		String[] tokens = input.split(" ");
 		if (tokens.length != 1 && tokens.length != 2) {
 			System.out.println(
-					"Parsing error: the input have a bad format. /login message for private connexion request");
+					"Parsing error: the input have a bad format. /login message for private connection request");
 			return;
 		}
 		if(tokens[0].equals(login)) {
@@ -180,7 +197,12 @@ public class Client {
 	}
 	
 
-	private void sendPrivateConnexionAcceptance(String input) {
+	/**
+	 * Send a positive answer to a private connection request
+	 * 
+	 * @param input to parse containing login and private message
+	 */
+	private void sendPrivateConnectionAcceptance(String input) {
 		String[] tokens = input.split(" ", 2);
 		if(!requesters.contains(tokens[1])) {
 			System.out.println(tokens[1] + " don't ask you for a private connection.");
@@ -189,7 +211,12 @@ public class Client {
 		mainContext.queueMessage(new Accept_co_private(login, tokens[1]));
 	}
 
-	private void sendPrivateConnexionRefusal(String input) {
+	/**
+	 * Send a negative answer to a private connection request
+	 * 
+	 * @param input to parse containing login and private message
+	 */
+	private void sendPrivateConnectionRefusal(String input) {
 		String[] tokens = input.split(" ", 2);
 		if(!requesters.contains(tokens[1])) {
 			System.out.println(tokens[1] + " don't ask you for a private connection.");
@@ -201,10 +228,11 @@ public class Client {
 	
 	
 	/**
+	 * Initialize a private connection
 	 * 
-	 * @param id
-	 * @param receiver
-	 * @throws IOException
+	 * @param id received by the server
+	 * @param receiver of the new connection
+	 * @throws IOException in case of bad connection address
 	 */
 	public void initializePrivateConnection(long id, String receiver) throws IOException {
 		SocketChannel privateSc = SocketChannel.open();
@@ -218,18 +246,19 @@ public class Client {
 	
 	
 	/**
+	 * Register client into a private connection map
 	 * 
-	 * @param login
-	 * @param ctx
+	 * @param login of the client to register
+	 * @param ctx the context to add to the map
 	 */
 	public void registerLogin(String login, PrivateClientContext ctx){
 		privateConnectionMap.put(login, ctx);
 	}
 
 	/**
-	 * Parse an input to determinate the type of packet. content.
+	 * Parse an input to determinate the type of command
 	 * 
-	 * @param msg
+	 * @param msg to parse
 	 */
 	private MessageType parseStandardInput(String msg) {
 		Objects.requireNonNull(msg);
@@ -277,13 +306,13 @@ public class Client {
 			sendPrivateMessage(msg.substring(1));
 			break;
 		case PRIVATE_REQUEST:
-			sendPrivateConnexionRequest(msg.substring(1));
+			sendPrivateConnectionRequest(msg.substring(1));
 			break;
 		case ACCEPT:
-			sendPrivateConnexionAcceptance(msg.substring(1));
+			sendPrivateConnectionAcceptance(msg.substring(1));
 			break;
 		case REFUSE:
-			sendPrivateConnexionRefusal(msg.substring(1));
+			sendPrivateConnectionRefusal(msg.substring(1));
 			break;
 		case ERROR:
 			System.out.println("Unknown command");
@@ -291,6 +320,10 @@ public class Client {
 		}
 	}
 
+	
+	/**
+	 * Launch the client
+	 */
 	public void launch() throws IOException {
 		sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_CONNECT);

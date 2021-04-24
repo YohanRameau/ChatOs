@@ -52,6 +52,9 @@ public class Server {
 		selector = Selector.open();
 	}
 
+	/**
+	 * Launch the server
+	 */
 	public void launch() throws IOException {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);

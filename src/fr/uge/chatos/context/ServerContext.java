@@ -69,7 +69,7 @@ public class ServerContext implements Context{
 	 */
 	public void identificationProcess(String login) {
 		if (!clientList.isPresent(login)) {
-			clientList.add(login, sc);
+			clientList.add(login, this);
 			this.login = login;
 			var acceptance_pck = new Acceptance(login);
 			queueMessage(acceptance_pck);
