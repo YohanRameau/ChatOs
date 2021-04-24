@@ -82,7 +82,35 @@ public class PrivateMessageReader implements Reader<Private_msg>{
 		}
 	}
 	
-	private ProcessStatus getPrivateMessage(ByteBuffer bb) {
+//	private ProcessStatus getPrivateMessage(ByteBuffer bb) {
+//		if (state == State.DONE || state == State.ERROR) {
+//			throw new IllegalStateException();
+//		}
+//
+//		// SENDER
+//		if (state == State.WAITING_SENDER) {
+//			getSender(bb, State.WAITING_RECEIVER);
+//		}
+//
+//		// RECEIVER
+//		if (state == State.WAITING_RECEIVER) {
+//			getReceiver(bb, State.WAITING_MSG);
+//		}
+//
+//		// MESSAGE
+//		if (state == State.WAITING_MSG) {
+//			return getMessage(bb, State.DONE);
+//		}
+//
+//		return ProcessStatus.REFILL;
+//
+//	}
+//	private ProcessStatus getAnswer(ByteBuffer bb) {
+////		return getSender(bb, State.DONE);
+////	}
+	
+	@Override
+	public ProcessStatus process(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
@@ -102,14 +130,7 @@ public class PrivateMessageReader implements Reader<Private_msg>{
 			return getMessage(bb, State.DONE);
 		}
 
-		return ProcessStatus.ERROR;
-
-	}
-	
-	
-	@Override
-	public ProcessStatus process(ByteBuffer bb) {
-		return getPrivateMessage(bb);
+		return ProcessStatus.REFILL;
 	}
 	
 	@Override

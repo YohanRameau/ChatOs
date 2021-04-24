@@ -2,8 +2,8 @@ package fr.uge.chatos;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-import fr.uge.chatos.context.ClientContext;
 import fr.uge.chatos.context.ServerContext;
 
 public class ClientList {
@@ -24,6 +24,10 @@ public class ClientList {
 			}
 		}
 		return false;
+	}
+	
+	public Optional<ServerContext> getClient(String login) {
+		return Optional.ofNullable(clients.get(login));
 	}
 
 	/**

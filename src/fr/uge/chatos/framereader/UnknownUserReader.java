@@ -46,14 +46,14 @@ public class UnknownUserReader implements Reader<Unknown_user>{
 		}
 	}
 	
-	private ProcessStatus getAnswer(ByteBuffer bb) {
-		return getSender(bb, State.DONE);
-	}
+//	private ProcessStatus getAnswer(ByteBuffer bb) {
+//		return getSender(bb, State.DONE);
+//	}
 
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		return getAnswer(bb);
+		return getSender(bb, State.DONE);
 	}
 	
 	@Override

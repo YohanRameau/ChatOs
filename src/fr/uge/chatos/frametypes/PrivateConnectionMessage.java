@@ -31,12 +31,22 @@ public class PrivateConnectionMessage implements Frame{
 //		bb.put(stringBb);
 //		bb.flip();
 //		return bb;
+
 //	}
+
+	
+	public long getId() {
+		return id;
+	}
+	
+	public String getMessage() {
+		return message;
+	}
 	
 	@Override
 	public ByteBuffer encode() {
 		var msg = BuildPacket.encodeString(message);
-		int bbSize = msg.remaining() + Byte.BYTES;
+		int bbSize = msg.remaining() + Byte.BYTES + Long.BYTES;
 		if (bbSize > Byte.BYTES + Integer.BYTES + Long.BYTES + MAX_MESSAGE_SIZE) {
 			throw new IllegalStateException("Message too long to be send on the server.");
 		}

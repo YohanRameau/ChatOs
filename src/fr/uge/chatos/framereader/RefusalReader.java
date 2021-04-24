@@ -12,9 +12,9 @@ public class RefusalReader implements Reader<Refusal>{
 	private StringReader sr = new StringReader();
 	private String sender;
 	
-	private ProcessStatus getAnswer(ByteBuffer bb) {
-		return getSender(bb, State.DONE);
-	}
+//	private ProcessStatus getAnswer(ByteBuffer bb) {
+//		return getSender(bb, State.DONE);
+//	}
 	
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
@@ -54,7 +54,7 @@ public class RefusalReader implements Reader<Refusal>{
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		System.out.println("REQUEST REFUSAL");
-		return getAnswer(bb);
+		return getSender(bb, State.DONE);
 	}
 	
 	@Override

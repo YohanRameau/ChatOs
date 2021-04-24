@@ -83,7 +83,32 @@ public class IdPrivateReader implements Reader<Id_private>{
 		}
 	}
 	
-	private ProcessStatus getIdPrivate(ByteBuffer bb) {
+//	private ProcessStatus getIdPrivate(ByteBuffer bb) {
+//		if (state == State.DONE || state == State.ERROR) {
+//			throw new IllegalStateException();
+//		}
+//
+//		// SENDER
+//		if (state == State.WAITING_SENDER) {
+//			getSender(bb, State.WAITING_RECEIVER);
+//		}
+//
+//		// RECEIVER
+//		if (state == State.WAITING_RECEIVER) {
+//			getReceiver(bb, State.WAITING_ID);
+//		}
+//		
+//		// ID 
+//		if(state == State.WAITING_ID) {
+//			return getId(bb);
+//		}
+//		
+//		return ProcessStatus.ERROR;
+//	}
+	
+	@Override
+	public ProcessStatus process(ByteBuffer bb) {
+		System.out.println("REQUEST ID PRIVATE");
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
@@ -103,13 +128,7 @@ public class IdPrivateReader implements Reader<Id_private>{
 			return getId(bb);
 		}
 		
-		return ProcessStatus.ERROR;
-	}
-	
-	@Override
-	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST ID PRIVATE");
-		return getIdPrivate(bb);
+		return ProcessStatus.REFILL;
 	}
 	
 	@Override

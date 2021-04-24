@@ -160,14 +160,8 @@ public class Client {
 	 * @param message to send
 	 * @return boolean 
 	 */
-	private boolean queuePrivateConnectionMessage(String login, String message) {
-		var pctx = privateConnectionMap.get(login);
-		if(pctx == null) {
-			System.out.println("You don't have a private connection with " + login );
-			return false;
-		}
+	private void queuePrivateConnectionMessage(PrivateClientContext pctx, String message) {
 		pctx.queueMessage(new PrivateConnectionMessage(message, pctx.getId()));
-		return true;
 	}
 	
 	
@@ -177,7 +171,7 @@ public class Client {
 	 * @param input to parse containing login and private message 
 	 */
 	private void sendPrivateConnectionRequest(String input) {
-		String[] tokens = input.split(" ");
+		String[] tokens = input.split(" ", 2);
 		if (tokens.length != 1 && tokens.length != 2) {
 			System.out.println(
 					"Parsing error: the input have a bad format. /login message for private connection request");
@@ -188,12 +182,17 @@ public class Client {
 			return;
 		}
 		
-		if (tokens.length == 2) {
-			if(queuePrivateConnectionMessage(tokens[0], tokens[1])) {
-				return;
-			}	
-		}
-		mainContext.queueMessage(new Request_co_private(login, tokens[0]));
+		var pctx = privateConnectionMap.get(tokens[0]);
+		
+		if (pctx == null) {
+			mainContext.queueMessage(new Request_co_private(login, tokens[0]));
+		} 
+		else if(pctx != null && tokens.length == 1) {	
+			System.out.println("Private connection with " + tokens[0] + " is finish.");
+			pctx.silentlyClose();
+		}else {
+			queuePrivateConnectionMessage(pctx, tokens[1]);
+		}	
 	}
 	
 

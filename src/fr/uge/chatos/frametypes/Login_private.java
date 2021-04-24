@@ -22,6 +22,10 @@ public class Login_private implements Frame{
 		visitor.visit(this);
 		
 	}
+	
+	public long getId() {
+		return id;
+	}
 
 	@Override
 	public ByteBuffer encode() {

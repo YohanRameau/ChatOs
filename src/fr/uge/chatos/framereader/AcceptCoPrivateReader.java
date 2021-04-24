@@ -27,7 +27,7 @@ public class AcceptCoPrivateReader implements Reader<Accept_co_private>{
 		if (state == State.WAITING_RECEIVER) {
 			return getReceiver(bb, State.DONE);
 		}
-		return ProcessStatus.ERROR;
+		return ProcessStatus.REFILL;
 
 	}
 	

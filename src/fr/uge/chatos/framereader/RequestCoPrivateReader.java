@@ -30,23 +30,22 @@ public class RequestCoPrivateReader implements Reader<Request_co_private>{
 		}
 	}
 	
-	private ProcessStatus getRequestConnexion(ByteBuffer bb) {
-		if (state == State.DONE || state == State.ERROR) {
-			throw new IllegalStateException();
-		}
-
-		// SENDER
-		if (state == State.WAITING_SENDER) {
-			getSender(bb, State.WAITING_RECEIVER);
-		}
-
-		// RECEIVER
-		if (state == State.WAITING_RECEIVER) {
-			return getReceiver(bb, State.DONE);
-		}
-		return ProcessStatus.ERROR;
-
-	}
+//	private ProcessStatus getRequestConnexion(ByteBuffer bb) {
+//		if (state == State.DONE || state == State.ERROR) {
+//			throw new IllegalStateException();
+//		}
+//
+//		// SENDER
+//		if (state == State.WAITING_SENDER) {
+//			getSender(bb, State.WAITING_RECEIVER);
+//		}
+//
+//		// RECEIVER
+//		if (state == State.WAITING_RECEIVER) {
+//			return getReceiver(bb, State.DONE);
+//		}
+//		return ProcessStatus.REFILL;
+//	}
 	
 	private ProcessStatus getSender(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_SENDER) {
@@ -85,7 +84,20 @@ public class RequestCoPrivateReader implements Reader<Request_co_private>{
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		System.out.println("REQUEST CO PRIVATE");
-		return getRequestConnexion(bb);
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
+
+		// SENDER
+		if (state == State.WAITING_SENDER) {
+			getSender(bb, State.WAITING_RECEIVER);
+		}
+
+		// RECEIVER
+		if (state == State.WAITING_RECEIVER) {
+			return getReceiver(bb, State.DONE);
+		}
+		return ProcessStatus.REFILL;
 	}
 	
 	@Override

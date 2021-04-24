@@ -11,6 +11,7 @@ import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
 import fr.uge.chatos.framereader.FrameReader;
 import fr.uge.chatos.frametypes.Login_private;
+import fr.uge.chatos.frametypes.PrivateConnectionMessage;
 import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.visitor.ClientPrivateFrameVisitor;
 
@@ -79,12 +80,9 @@ public class PrivateClientContext implements Context {
 		queueMessage(pck);
 	}
 
-	public void displayMessage(Public_msg pck) {
-		if (pck.getSender().equals(login)) {
-			System.out.println("(Private connexion) Me: " + pck.getMessage());
-			return;
-		} else {
-			System.out.println("(Private connexion) "+pck.getSender() + ": " + pck.getMessage());
+	public void displayMessage(PrivateConnectionMessage pck) {
+		 {
+			System.out.println("(Private connexion) " + login + " : " + pck.getMessage());
 			return;
 		}
 	}

@@ -11,10 +11,10 @@ public class AcceptanceReader implements Reader<Acceptance>{
 	private State state = State.WAITING_SENDER;
 	private StringReader sr = new StringReader();
 	private String sender;
-	
-	private ProcessStatus getAnswer(ByteBuffer bb) {
-		return getSender(bb, State.DONE);
-	}
+//	
+//	private ProcessStatus getAnswer(ByteBuffer bb) {
+//		return getSender(bb, State.DONE);
+//	}
 	
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
@@ -53,7 +53,7 @@ public class AcceptanceReader implements Reader<Acceptance>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		return getAnswer(bb);
+		return getSender(bb, State.DONE);
 	}
 	
 	@Override

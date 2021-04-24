@@ -101,17 +101,17 @@ public class ServerContext implements Context{
 	
 	public void askPrivateConnection(SendToOne pck) {
 		if(requesters.contains(pck.getReceiver())) {
-			// 
+			// TODO SEND ERROR PACKET WITH OP CODE CORRESPONDING TO ALREADY ASK
 			System.out.println(pck.getSender() + " already ask a private Connection " + pck.getReceiver());
 			return;
 		}
-		addRequester(pck.getReceiver());
-		if (!server.privateUnicast(pck)) {
+		if (!server.privateConnectionInit(this, pck)) {
 			System.out.println(pck.getSender() + " didnt ask a private connection before " + pck.getReceiver());
 			var unknown_user = new Unknown_user(pck.getSender());
 			queueMessage(unknown_user);
 			return;
 		};
+		
 	}
 	
 	

@@ -11,12 +11,12 @@ public class LoginPrivateReader implements Reader<Login_private>{
 	private State state = State.WAITING_ID;
 	private LongReader lr = new LongReader();
 	
-	private ProcessStatus getLoginPrivate(ByteBuffer bb) {
-		if (state == State.DONE || state == State.ERROR) {	
-			throw new IllegalStateException();
-		}
-		return getId(bb) ;
-	}
+//	private ProcessStatus getLoginPrivate(ByteBuffer bb) {
+//		if (state == State.DONE || state == State.ERROR) {	
+//			throw new IllegalStateException();
+//		}
+//		return getId(bb) ;
+//	}
 	
 	private ProcessStatus getId(ByteBuffer bb) {
 		if(state != State.WAITING_ID) {
@@ -37,7 +37,10 @@ public class LoginPrivateReader implements Reader<Login_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		return getLoginPrivate(bb);
+		if (state == State.DONE || state == State.ERROR) {	
+			throw new IllegalStateException();
+		}
+		return getId(bb) ;
 	}
 	
 	@Override

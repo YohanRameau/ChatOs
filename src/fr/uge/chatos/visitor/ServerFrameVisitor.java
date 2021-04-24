@@ -4,20 +4,16 @@ import java.nio.channels.SelectionKey;
 
 import fr.uge.chatos.Server;
 import fr.uge.chatos.context.ServerContext;
-import fr.uge.chatos.context.ServerContextPrivate;
 import fr.uge.chatos.frametypes.Accept_co_private;
-import fr.uge.chatos.frametypes.Acceptance;
 import fr.uge.chatos.frametypes.Established_private;
 import fr.uge.chatos.frametypes.Id_private;
 import fr.uge.chatos.frametypes.Login_private;
 import fr.uge.chatos.frametypes.PrivateConnectionMessage;
 import fr.uge.chatos.frametypes.Private_msg;
 import fr.uge.chatos.frametypes.Public_msg;
-import fr.uge.chatos.frametypes.Refusal;
 import fr.uge.chatos.frametypes.Refusal_co_private;
 import fr.uge.chatos.frametypes.Request_co_private;
 import fr.uge.chatos.frametypes.Request_co_server;
-import fr.uge.chatos.frametypes.Unknown_user;
 
 public class ServerFrameVisitor implements FrameVisitor{
 
@@ -50,16 +46,24 @@ public class ServerFrameVisitor implements FrameVisitor{
 	@Override
 	public void visit(Accept_co_private pck) {
 		closeIfNotPublicConnection();
-		long id = server.generateId();
-		var idPrivate1 = new Id_private(pck.getSender(), pck.getReceiver(), id);
-		var idPrivate2 = new Id_private(pck.getReceiver(), pck.getSender(), id);
+		
+		long id = server.initializedPrivateconnection();
+		var sender = pck.getSender();
+		var receiver = pck.getReceiver();
+		var idPrivate1 = new Id_private(sender, receiver, id);
+		var idPrivate2 = new Id_private(receiver, sender, id);
 		ctx.unicastOrUnknow(idPrivate1);
 		ctx.unicastOrUnknow(idPrivate2);
+		
 	}
 
 	@Override
 	public void visit(Login_private pck) {
 		acceptedPrivateConnection = true;
+		if(!server.registerPrivateConnection(pck.getId(), ctx)) {
+			ctx.silentlyClose();
+			return;
+		}
 //		this.pctx = new ServerContextPrivate(server, key);
 		var establishedPck = new Established_private();
 //		server.switchKey(key, pctx);
@@ -103,7 +107,13 @@ public class ServerFrameVisitor implements FrameVisitor{
 		if(!privateConnection()) {
 			ctx.silentlyClose();
 		}
-		// TODO 
+		var tmp = server.getPrivateConnectionInfo(pck.getId());
+		if(tmp.isEmpty()) {
+			ctx.silentlyClose();
+			return;
+		}
+		var pci = tmp.get();
+		pci.edgeSending(ctx, pck);
 	}
  
 }

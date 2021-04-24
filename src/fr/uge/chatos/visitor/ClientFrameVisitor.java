@@ -101,10 +101,4 @@ public class ClientFrameVisitor implements FrameVisitor{
 		System.out.println("This user is not present on this server !");		
 	}
 	
-	@Override
-	public void visit(Established_private pck) {
-		System.out.println("NORMAL: Private connection established !");
-	}
- 
-	
 }

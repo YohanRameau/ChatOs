@@ -13,23 +13,23 @@ public class PublicMessageReader implements Reader<Public_msg>{
 	private String sender;
 	private String message;
 	
-	private ProcessStatus getPublicMessage(ByteBuffer bb) {
-		if (state == State.DONE || state == State.ERROR) {
-			throw new IllegalStateException();
-		}
-		// SENDER
-		if (state == State.WAITING_SENDER) {
-			getSender(bb, State.WAITING_MSG);
-		}
-
-		// MESSAGE
-		if (state == State.WAITING_MSG) {
-			return getMessage(bb, State.DONE);
-		}
-
-		return ProcessStatus.ERROR;
-
-	}
+//	private ProcessStatus getPublicMessage(ByteBuffer bb) {
+//		if (state == State.DONE || state == State.ERROR) {
+//			throw new IllegalStateException();
+//		}
+//		// SENDER
+//		if (state == State.WAITING_SENDER) {
+//			getSender(bb, State.WAITING_MSG);
+//		}
+//
+//		// MESSAGE
+//		if (state == State.WAITING_MSG) {
+//			return getMessage(bb, State.DONE);
+//		}
+//
+//		return ProcessStatus.REFILL;
+//
+//	}
 	
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
@@ -84,7 +84,20 @@ public class PublicMessageReader implements Reader<Public_msg>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		return getPublicMessage(bb);
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
+		// SENDER
+		if (state == State.WAITING_SENDER) {
+			getSender(bb, State.WAITING_MSG);
+		}
+
+		// MESSAGE
+		if (state == State.WAITING_MSG) {
+			return getMessage(bb, State.DONE);
+		}
+
+		return ProcessStatus.REFILL;
 	}
 	
 	@Override
