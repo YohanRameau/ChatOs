@@ -16,6 +16,13 @@ public class IdPrivateReader implements Reader<Id_private>{
 	private String receiver;
 	private long id;
 	
+	
+	/**
+	 * Read any id found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getId(ByteBuffer bb) {
 		if(state != State.WAITING_ID) {
 			throw new IllegalStateException();
@@ -34,6 +41,14 @@ public class IdPrivateReader implements Reader<Id_private>{
 		}
 	}
 	
+	/**
+	 * Read any string found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param waitingState The state the reader is on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
 			throw new IllegalStateException();
@@ -51,6 +66,13 @@ public class IdPrivateReader implements Reader<Id_private>{
 		}
 	}
 	
+	/**
+	 * Read the sender found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getSender(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_SENDER) {
 			throw new IllegalStateException();
@@ -68,6 +90,13 @@ public class IdPrivateReader implements Reader<Id_private>{
 		}
 	}
 
+	/**
+	 * Read the receiver found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getReceiver(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_RECEIVER) {
 			throw new IllegalStateException();
@@ -85,29 +114,12 @@ public class IdPrivateReader implements Reader<Id_private>{
 		}
 	}
 	
-//	private ProcessStatus getIdPrivate(ByteBuffer bb) {
-//		if (state == State.DONE || state == State.ERROR) {
-//			throw new IllegalStateException();
-//		}
-//
-//		// SENDER
-//		if (state == State.WAITING_SENDER) {
-//			getSender(bb, State.WAITING_RECEIVER);
-//		}
-//
-//		// RECEIVER
-//		if (state == State.WAITING_RECEIVER) {
-//			getReceiver(bb, State.WAITING_ID);
-//		}
-//		
-//		// ID 
-//		if(state == State.WAITING_ID) {
-//			return getId(bb);
-//		}
-//		
-//		return ProcessStatus.ERROR;
-//	}
-	
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
@@ -132,6 +144,12 @@ public class IdPrivateReader implements Reader<Id_private>{
 		return ProcessStatus.REFILL;
 	}
 	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public Id_private get() {
 		if(state != State.DONE) {

@@ -12,6 +12,12 @@ public class LongReader implements Reader<Long> {
     private final ByteBuffer internalbb = ByteBuffer.allocate(Long.BYTES); // write-mode
     private long value;
 
+    /**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
     @Override
     public ProcessStatus process(ByteBuffer bb) {
         if (state== State.DONE || state== State.ERROR) {
@@ -39,6 +45,12 @@ public class LongReader implements Reader<Long> {
         return ProcessStatus.DONE;
     }
 
+    /**
+	 * Get the readed long
+	 * 
+	 * @throws IllegalStateException
+	 * @return The Long
+	 */
     @Override
     public Long get() {
         if (state!= State.DONE) {

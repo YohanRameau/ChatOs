@@ -10,14 +10,13 @@ public class LoginPrivateReader implements Reader<Login_private>{
 
 	private State state = State.WAITING_ID;
 	private LongReader lr = new LongReader();
-	
-//	private ProcessStatus getLoginPrivate(ByteBuffer bb) {
-//		if (state == State.DONE || state == State.ERROR) {	
-//			throw new IllegalStateException();
-//		}
-//		return getId(bb) ;
-//	}
-	
+
+	/**
+	 * Read any id found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getId(ByteBuffer bb) {
 		if(state != State.WAITING_ID) {
 			throw new IllegalStateException();
@@ -35,6 +34,12 @@ public class LoginPrivateReader implements Reader<Login_private>{
 		}
 	}
 	
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {	
@@ -43,6 +48,12 @@ public class LoginPrivateReader implements Reader<Login_private>{
 		return getId(bb) ;
 	}
 	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public Login_private get() {
 		if(state != State.DONE) {

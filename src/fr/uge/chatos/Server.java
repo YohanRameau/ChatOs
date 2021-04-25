@@ -22,6 +22,7 @@ import fr.uge.chatos.frametypes.SendToOne;
 public class Server {
 
 	public static class PrivateConnectionsInformations {
+		@SuppressWarnings("unused")
 		private final long id;
 		private ServerContext firstContext = null;
 		private ServerContext secondContext = null;
@@ -47,7 +48,9 @@ public class Server {
 		}
 		
 		private Optional<ServerContext> getOtherContext(ServerContext sctx) {
-			ServerContext result = null;			
+
+			ServerContext result = null;
+			
 			if(sctx == firstContext) {
 				result = secondContext;
 			} else if (sctx == secondContext ) {
@@ -59,7 +62,6 @@ public class Server {
 		public void edgeSending(ServerContext context, Frame frame) {
 			var optional_ctx = getOtherContext(context);
 			if(optional_ctx.isEmpty()) {
-				// Usurpation connection
 				context.silentlyClose();
 			} 
 			var other_ctx = optional_ctx.get();
@@ -105,7 +107,6 @@ public class Server {
 		}
 	}
 	
-	
 	public long generateId() {
 		long res = privateConnectionCompt;
 		privateConnectionCompt += 1; 
@@ -123,7 +124,7 @@ public class Server {
 	}
 	
 	public boolean registerPrivateConnection(long id, ServerContext ctx) {
-		
+
 		var clientInfo = privateConnectionMap.get(id);
 		if(clientInfo == null) {
 
@@ -261,7 +262,7 @@ public class Server {
 			return true;
 		}
 		return true;
-		
+
 	}
 	
 	/**
@@ -279,8 +280,6 @@ public class Server {
 		senderContext.removeRequester(receiver);
 		receiverContext.removeRequester(sender);
 	}
-
-
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 1) {

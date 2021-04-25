@@ -43,6 +43,12 @@ public class ServerContext implements Context{
 		this.visitor = new ServerFrameVisitor(server, this, key);
 	}
 	
+	/**
+	 * Check if a client is already connected
+	 *
+	 * @param login The name of the client to check
+	 * @return True if the client is connected, else false
+	 */
 	public boolean isClient(String login) {
 		return this.login.equals(login);
 	}
@@ -59,20 +65,7 @@ public class ServerContext implements Context{
 		return queue.size() == QUEUE_SIZE;
 	}
 	
-	public void sendPrivatePacket(Frame frame ,long id) {
-		var tmp = server.getPrivateConnectionInfo(id);
-		if(tmp.isEmpty()) {
-			System.out.println("No private connection with it's id");
-			silentlyClose();
-			return;
-		}
-		var pci = tmp.get();
-		// server.sendToOtherCLient(id, this, frame)
-		// TODO Finir les méthodes de PrivateConnectionInfo
-			
-	}
 	
-
 	/**
 	 * Process the identification if the client is not already connected. Send an
 	 * error if the opCode is not the identification code else it send an acceptance packet.
@@ -94,6 +87,11 @@ public class ServerContext implements Context{
 		return;
 	}
 	
+	/**
+	 * Check if a client has established a private connection
+	 *
+	 * @return True if the client is connected, else false
+	 */
 	@Override
 	public boolean privateConnection() {
 		return visitor.privateConnection();
@@ -112,10 +110,14 @@ public class ServerContext implements Context{
 		};
 	}
 	
+	/**
+	 * Try to init a private connection
+	 *
+	 * @param pck The packet containing the answer to a previous private connection attempt
+	 */
 	public void askPrivateConnection(SendToOne pck) {
 		System.out.println(requesters);
 		if(requesters.contains(pck.getReceiver())) {
-			// TODO SEND ERROR PACKET WITH OP CODE CORRESPONDING TO ALREADY ASK
 			System.out.println(pck.getSender() + " already ask a private Connection " + pck.getReceiver());
 			return;
 		}
@@ -131,16 +133,30 @@ public class ServerContext implements Context{
 		return requesters.contains(login);
 	}
 	
-	
+	/**
+	 * Add a client to the list of the private connection requesters
+	 *
+	 * @param login The name of the client
+	 */
 	public boolean addRequester(String login) {
 		return requesters.add(login);
 	}
 	
+	/**
+	 * Remove a client from the list of the private connection requesters
+	 *
+	 * @param login The name of the client
+	 */
 	public void removeRequester(String login) {
 		requesters.remove(login);
 	}
 	
-
+	/**
+	 * Call the frame's specific visitor to apply actions
+	 * 
+	 * @param frame The frame to be treated
+	 *
+	 */
 	private void treatFrame(Frame frame) {
 		frame.accept(visitor);
 	}
@@ -161,9 +177,6 @@ public class ServerContext implements Context{
 			break;
 		case REFILL:
 			return;
-//            case RETRY:
-//            	packetReader.reset();
-//            	return;
 		case ERROR:
 			closed = true;
 			return;

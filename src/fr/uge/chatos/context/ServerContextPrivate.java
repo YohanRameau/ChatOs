@@ -6,11 +6,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 import fr.uge.chatos.Server;
-import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
 import fr.uge.chatos.framereader.FrameReader;
-import fr.uge.chatos.framereader.Packet;
 import fr.uge.chatos.visitor.ServerPrivateFrameVisitor;
 
 public class ServerContextPrivate implements Context{
@@ -20,6 +18,7 @@ public class ServerContextPrivate implements Context{
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
+	@SuppressWarnings("unused")
 	final private Server server;
 	private Frame pck;
 	private ServerPrivateFrameVisitor visitor;
@@ -33,13 +32,22 @@ public class ServerContextPrivate implements Context{
 		this.visitor = new ServerPrivateFrameVisitor(server, this);
 	}
 	
-	
+	/**
+	 * Check if a client has established a private connection
+	 *
+	 * @return True if the client is connected, else false
+	 */
 	@Override
 	public boolean privateConnection() {
-		System.out.println("Server context private connection bon vous soltez");
 		return true;
 	}
 	
+	/**
+	 * Call the frame's specific visitor to apply actions
+	 * 
+	 * @param frame The frame to be treated
+	 *
+	 */
 	private void treatFrame(Frame frame) {
 		frame.accept(visitor);
 	}
@@ -60,9 +68,6 @@ public class ServerContextPrivate implements Context{
 			break;
 		case REFILL:
 			return;
-//            case RETRY:
-//            	packetReader.reset();
-//            	return;
 		case ERROR:
 			closed = true;
 			return;
@@ -110,7 +115,6 @@ public class ServerContextPrivate implements Context{
 
 	public void updateInterestOps() {
 		var newInterestOps = 0;
-		System.out.println("BBOUT: " + bbout);
 		if (!closed && bbin.hasRemaining()) {
 			newInterestOps |= SelectionKey.OP_READ;
 		}

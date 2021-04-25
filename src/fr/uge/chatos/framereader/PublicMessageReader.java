@@ -13,24 +13,14 @@ public class PublicMessageReader implements Reader<Public_msg>{
 	private String sender;
 	private String message;
 	
-//	private ProcessStatus getPublicMessage(ByteBuffer bb) {
-//		if (state == State.DONE || state == State.ERROR) {
-//			throw new IllegalStateException();
-//		}
-//		// SENDER
-//		if (state == State.WAITING_SENDER) {
-//			getSender(bb, State.WAITING_MSG);
-//		}
-//
-//		// MESSAGE
-//		if (state == State.WAITING_MSG) {
-//			return getMessage(bb, State.DONE);
-//		}
-//
-//		return ProcessStatus.REFILL;
-//
-//	}
-	
+	/**
+	 * Read any string found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param waitingState The state the reader is on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
 			throw new IllegalStateException();
@@ -48,6 +38,13 @@ public class PublicMessageReader implements Reader<Public_msg>{
 		}
 	}
 	
+	/**
+	 * Read the sender found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getSender(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_SENDER) {
 			throw new IllegalStateException();
@@ -65,6 +62,13 @@ public class PublicMessageReader implements Reader<Public_msg>{
 		}
 	}
 	
+	/**
+	 * Read any message found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getMessage(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_MSG) {
 			throw new IllegalStateException();
@@ -82,6 +86,12 @@ public class PublicMessageReader implements Reader<Public_msg>{
 		}
 	}
 	
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
@@ -100,6 +110,12 @@ public class PublicMessageReader implements Reader<Public_msg>{
 		return ProcessStatus.REFILL;
 	}
 	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public Public_msg get() {
 		if (state != State.DONE) {

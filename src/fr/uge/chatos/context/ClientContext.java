@@ -6,7 +6,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 import fr.uge.chatos.Client;
-import fr.uge.chatos.core.BuildPacket;
 import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
 import fr.uge.chatos.framereader.FrameReader;
@@ -22,6 +21,7 @@ public class ClientContext implements Context {
 	final private SocketChannel sc;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
+	@SuppressWarnings("unused")
 	final private Client client;
 	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
 	final private FrameReader frameReader = new FrameReader();
@@ -38,7 +38,12 @@ public class ClientContext implements Context {
 		this.visitor = new ClientFrameVisitor(login, client ,this);
 	}
 
-	
+	/**
+	 * Call the frame's specific visitor to apply actions
+	 * 
+	 * @param frame The frame to be treated
+	 *
+	 */
 	private void treatFrame(Frame frame) {
 		frame.accept(visitor);
 	}
@@ -69,7 +74,12 @@ public class ClientContext implements Context {
 			}
 		}
 	}
-
+	
+	/**
+	 * Display on the client's console the public message received
+	 *
+	 * @param pck The packet containing the message to display
+	 */
 	public void displayMessage(Public_msg pck) {
 		if (pck.getSender().equals(login)) {
 			System.out.println("Me: " + pck.getMessage());
@@ -86,9 +96,14 @@ public class ClientContext implements Context {
 	 * @param bb
 	 */
 	public void queueMessage(Frame msg) {
-		queue.add(msg.encode());
-		processOut();
-		updateInterestOps();
+		if(!queue.add(msg.encode())) {
+			System.out.println("Disconected : Timeout");
+			silentlyClose();
+		}
+		else {
+			processOut();
+			updateInterestOps();
+		}
 	}
 
 	/**
@@ -176,6 +191,14 @@ public class ClientContext implements Context {
 		updateInterestOps();
 	}
 
+	/**
+	 * Performs the connect action on sc
+	 *
+	 * The convention is that both buffers are in write-mode before the call to
+	 * doConnect and after the call
+	 *
+	 * @throws IOException
+	 */
 	public void doConnect() throws IOException {
 		if (!sc.finishConnect()) {
 			return;

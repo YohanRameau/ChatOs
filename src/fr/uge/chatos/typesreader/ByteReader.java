@@ -14,6 +14,12 @@ public class ByteReader implements Reader<Byte> {
 	private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_MAX_SIZE);
 	private Byte value;
 
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
@@ -34,6 +40,12 @@ public class ByteReader implements Reader<Byte> {
 		return ProcessStatus.DONE;
 	}
 
+	/**
+	 * Get the readed byte
+	 * 
+	 * @throws IllegalStateException
+	 * @return The byte
+	 */
 	@Override
 	public Byte get() {
 		if (state != State.DONE) {

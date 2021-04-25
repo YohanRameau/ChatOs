@@ -5,7 +5,6 @@ import fr.uge.chatos.Client;
 import fr.uge.chatos.context.PrivateClientContext;
 import fr.uge.chatos.frametypes.Established_private;
 import fr.uge.chatos.frametypes.PrivateConnectionMessage;
-import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.frametypes.Unknown_user;
 
 public class ClientPrivateFrameVisitor implements FrameVisitor{

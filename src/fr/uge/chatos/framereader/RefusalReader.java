@@ -12,7 +12,15 @@ public class RefusalReader implements Reader<Refusal>{
 	private StringReader sr = new StringReader();
 	private String sender;
 	
-	
+
+	/**
+	 * Read any string found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param waitingState The state the reader is on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
 			throw new IllegalStateException();
@@ -30,6 +38,13 @@ public class RefusalReader implements Reader<Refusal>{
 		}
 	}
 	
+	/**
+	 * Read the sender found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getSender(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_SENDER) {
 			throw new IllegalStateException();
@@ -47,13 +62,23 @@ public class RefusalReader implements Reader<Refusal>{
 		}
 	}
 
-	
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST REFUSAL");
 		return getSender(bb, State.DONE);
 	}
 	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public Refusal get() {
 		if(state != State.DONE) {

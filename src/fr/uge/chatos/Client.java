@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -21,12 +20,6 @@ import java.util.logging.Logger;
 import fr.uge.chatos.context.ClientContext;
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.PrivateClientContext;
-import fr.uge.chatos.frametypes.Accept_co_private;
-import fr.uge.chatos.frametypes.PrivateConnectionMessage;
-import fr.uge.chatos.frametypes.Private_msg;
-import fr.uge.chatos.frametypes.Public_msg;
-import fr.uge.chatos.frametypes.Refusal_co_private;
-import fr.uge.chatos.frametypes.Request_co_private;
 import fr.uge.chatos.observer.ConsoleObserver;
 
 public class Client {
@@ -113,7 +106,6 @@ public class Client {
 	 * @throws IllegalStateException if clients have the same login or the connection is already established
 	 */
 	public void removePrivateRequester(String login) {
-		System.out.println(requesters);
 		if(this.login.equals(login)) {
 			throw new IllegalStateException("Two clients can not have the same login.");
 		}

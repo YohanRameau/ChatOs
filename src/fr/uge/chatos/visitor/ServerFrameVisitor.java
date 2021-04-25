@@ -67,9 +67,7 @@ public class ServerFrameVisitor implements FrameVisitor{
 			ctx.silentlyClose();
 			return;
 		}
-//		this.pctx = new ServerContextPrivate(server, key);
 		var establishedPck = new Established_private();
-//		server.switchKey(key, pctx);
 		ctx.queueMessage(establishedPck);
 	}
 
