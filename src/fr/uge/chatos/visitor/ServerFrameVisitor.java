@@ -14,12 +14,12 @@ import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.frametypes.Refusal_co_private;
 import fr.uge.chatos.frametypes.Request_co_private;
 import fr.uge.chatos.frametypes.Request_co_server;
-import fr.uge.chatos.frametypes.SendToOne;
 
 public class ServerFrameVisitor implements FrameVisitor{
 
 	private Server server;
 	private ServerContext ctx;
+	@SuppressWarnings("unused")
 	private final SelectionKey key;
 	private boolean acceptedPublicConnection = false;
 	private boolean acceptedPrivateConnection = false;

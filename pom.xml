@@ -15,7 +15,7 @@
 					<release>15</release>
 				</configuration>
 			</plugin>
-
+			
 			<plugin>
 				<artifactId>maven-shade-plugin</artifactId>
 				<version>2.4.3</version>
@@ -57,8 +57,17 @@
 					<shadedArtifactAttached>true</shadedArtifactAttached>
 					<createDependencyReducedPom>false</createDependencyReducedPom>
 				</configuration>
-			</plugin>
-
+				</plugin>
+		<!-- For Javadoc generation -->
+				<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-javadoc-plugin</artifactId>
+			<version>3.2.0</version>
+			<configuration>
+				<stylesheetfile>${basedir}/src/main/javadoc/stylesheet.css</stylesheetfile>
+				<show>public</show>
+			</configuration>
+		</plugin>
 		</plugins>
 	</build>
 </project>

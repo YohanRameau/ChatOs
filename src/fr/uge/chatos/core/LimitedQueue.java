@@ -5,7 +5,7 @@ import java.util.LinkedList;
 @SuppressWarnings("serial")
 public class LimitedQueue<E> extends LinkedList<E> {
 
-    private int limit;
+	private int limit;
 
     public LimitedQueue(int limit) {
         this.limit = limit;

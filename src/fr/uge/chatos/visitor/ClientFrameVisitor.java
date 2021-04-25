@@ -4,9 +4,7 @@ import java.io.IOException;
 
 import fr.uge.chatos.Client;
 import fr.uge.chatos.context.ClientContext;
-import fr.uge.chatos.frametypes.Accept_co_private;
 import fr.uge.chatos.frametypes.Acceptance;
-import fr.uge.chatos.frametypes.Established_private;
 import fr.uge.chatos.frametypes.Id_private;
 import fr.uge.chatos.frametypes.Private_msg;
 import fr.uge.chatos.frametypes.Public_msg;
@@ -17,6 +15,7 @@ import fr.uge.chatos.frametypes.Unknown_user;
 
 public class ClientFrameVisitor implements FrameVisitor{
 	
+	@SuppressWarnings("unused")
 	private final String login;
 	private Client client;
 	private ClientContext ctx;

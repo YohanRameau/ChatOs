@@ -1,6 +1,0 @@
-package fr.uge.chatos.framereader;
-
-
-public enum PacketTypes {
-	IDENTIFICATION, CONNECTION_ACCEPTANCE, CONNECTION_REFUSAL, CONNECTION_USER, PUBLIC_MESSAGE, PRIVATE_MESSAGE
-}

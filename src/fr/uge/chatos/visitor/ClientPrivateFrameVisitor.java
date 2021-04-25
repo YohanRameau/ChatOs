@@ -9,6 +9,7 @@ import fr.uge.chatos.frametypes.Unknown_user;
 
 public class ClientPrivateFrameVisitor implements FrameVisitor{
 
+	@SuppressWarnings("unused")
 	private Client client;
 	private PrivateClientContext ctx;
 	private boolean accepted = true;
