@@ -24,8 +24,21 @@ import fr.uge.chatos.observer.ConsoleObserver;
 
 public class Client {
 
-	static private Logger logger = Logger.getLogger(Client.class.getName());
-
+	static private final Logger logger = Logger.getLogger(Client.class.getName());
+	static private final String BANNER = "\n"
+			+ "───────────────────────────────────────────────────────────────────────────────────────────\n"
+			+ "─██████████████─██████──██████─██████████████─██████████████─██████████████─██████████████─\n"
+			+ "─██░░░░░░░░░░██─██░░██──██░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─\n"
+			+ "─██░░██████████─██░░██──██░░██─██░░██████░░██─██████░░██████─██░░██████░░██─██░░██████████─\n"
+			+ "─██░░██─────────██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██──██░░██─██░░██─────────\n"
+			+ "─██░░██─────────██░░██████░░██─██░░██████░░██─────██░░██─────██░░██──██░░██─██░░██████████─\n"
+			+ "─██░░██─────────██░░░░░░░░░░██─██░░░░░░░░░░██─────██░░██─────██░░██──██░░██─██░░░░░░░░░░██─\n"
+			+ "─██░░██─────────██░░██████░░██─██░░██████░░██─────██░░██─────██░░██──██░░██─██████████░░██─\n"
+			+ "─██░░██─────────██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██──██░░██─────────██░░██─\n"
+			+ "─██░░██████████─██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██████░░██─██████████░░██─\n"
+			+ "─██░░░░░░░░░░██─██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░░░░░░░░░██─██░░░░░░░░░░██─\n"
+			+ "─██████████████─██████──██████─██████──██████─────██████─────██████████████─██████████████─\n"
+			+ "───────────────────────────────────────────────────────────────────────────────────────────";
 	private final SocketChannel sc;
 	private final Selector selector;
 	private final InetSocketAddress serverAddress;
@@ -76,7 +89,6 @@ public class Client {
 	 */
 
 	private void processStandardInput(String msg) throws InterruptedException {
-		System.out.println("msg process " + msg);
 		commandQueue.add(msg);
 		selector.wakeup();
 	}
@@ -135,6 +147,7 @@ public class Client {
 	 * Launch the client
 	 */
 	public void launch() throws IOException {
+		System.out.println(BANNER);
 		sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_CONNECT);
 		mainContext = new ClientContext(key, login, this);
