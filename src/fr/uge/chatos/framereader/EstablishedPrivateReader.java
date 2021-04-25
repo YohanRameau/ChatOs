@@ -8,7 +8,6 @@ public class EstablishedPrivateReader implements Reader<Established_private>{
 
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST ESTABLISHED");
 		return ProcessStatus.DONE;
 	}
 	

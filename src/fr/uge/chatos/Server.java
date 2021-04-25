@@ -47,10 +47,7 @@ public class Server {
 		}
 		
 		private Optional<ServerContext> getOtherContext(ServerContext sctx) {
-			ServerContext result = null;
-			
-			System.out.println("parameter : " + sctx + " ctx 1 : " + firstContext + " ctx 2 : " + secondContext);
-			
+			ServerContext result = null;			
 			if(sctx == firstContext) {
 				result = secondContext;
 			} else if (sctx == secondContext ) {
@@ -60,12 +57,6 @@ public class Server {
 		}
 		
 		public void edgeSending(ServerContext context, Frame frame) {
-			// TODO Retrouver le privateClientInfo à partir de l'id
-			// Determiner lequel des deux context et le sender et lequel est le receiver (context == privatecontextinfo.context1 ou 2)
-			// mettre la frame dans le queue message du context receiver
-			// ne pas oublier les vérifications (est ce que context est l'un des deux context ?)
-			
-			System.out.println("EDGE SENDING");
 			var optional_ctx = getOtherContext(context);
 			if(optional_ctx.isEmpty()) {
 				// Usurpation connection
@@ -77,8 +68,9 @@ public class Server {
 	}
 
 	static private final Logger logger = Logger.getLogger(Server.class.getName());
-
-	private final AtomicLong privateConnectionCompt = new AtomicLong();
+	static private final long TIMEOUT = 1000 * 60 * 5; // 5 minutes timeout 
+	
+	private long privateConnectionCompt = 0;
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final ClientList clientList = new ClientList();
@@ -97,21 +89,27 @@ public class Server {
 	public void launch() throws IOException {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-		while (!Thread.interrupted()) {
+		long startTimer = System.currentTimeMillis(); 
+		while (!Thread.interrupted()) {		
 			printKeys(); // for debug
 			try {
-				selector.select(this::treatKey);
+				selector.select(this::treatKey, TIMEOUT);
+				long timeSinceLastcheck = (System.currentTimeMillis() - startTimer) ;
+				if(TIMEOUT < timeSinceLastcheck) {
+					checkInactiveClient();
+					startTimer = System.currentTimeMillis();
+				}
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
 		}
 	}
 	
-	// TODO ClientPrivateInfo -> Pas mal de méthode peut etre faudra creer une classe
-
 	
 	public long generateId() {
-		return privateConnectionCompt.getAndIncrement();
+		long res = privateConnectionCompt;
+		privateConnectionCompt += 1; 
+		return res;
 	}
 	
 	public Optional<PrivateConnectionsInformations> getPrivateConnectionInfo(long id) {
@@ -125,18 +123,10 @@ public class Server {
 	}
 	
 	public boolean registerPrivateConnection(long id, ServerContext ctx) {
-		// TODO Trouver les deux context (context1 et context2) en fonctions des deux logins
-	    // creer un nouvel objet PrivateConnectionInfo à partir des deux ocntext et de l'id
-	
-//		var tmp1 = clientList.getClient(sender);
-//		var tmp2 = clientList.getClient(receiver);
-//		
-//		if(tmp1.isEmpty() || tmp2.isEmpty()) {
-//			return false;
-//		}
 		
 		var clientInfo = privateConnectionMap.get(id);
 		if(clientInfo == null) {
+
 			ctx.silentlyClose();
 			return false;
 		}
@@ -148,7 +138,27 @@ public class Server {
 		return clientInfo.registerClient(ctx);
 	}
 	
-
+	/**
+	 * 
+	 * @param key
+	 */
+	private void disconnectIfInactive(SelectionKey key) {
+		
+		var ctx = (ServerContext) key.attachment();
+		if(ctx == null) {
+			return;
+		} 
+		if(!ctx.isActive() || ctx.fulledQueue()) {
+			ctx.silentlyClose();
+		} else {
+			ctx.setInactive();
+		}
+	}
+	
+	private void checkInactiveClient() {
+		selector.keys().stream().forEach(this::disconnectIfInactive); 
+	}
+	
 	/**
 	 * 
 	 * @param key
@@ -165,10 +175,10 @@ public class Server {
 		}
 		try {
 			if (key.isValid() && key.isWritable()) {
-				((Context) key.attachment()).doWrite();
+				((ServerContext) key.attachment()).doWrite();
 			}
 			if (key.isValid() && key.isReadable()) {
-				((Context) key.attachment()).doRead();
+				((ServerContext) key.attachment()).doRead();
 			}
 		} catch (IOException e) {
 			logger.log(Level.INFO, "Connection closed with client due to IOException", e);
@@ -234,20 +244,8 @@ public class Server {
 		}
 		optionalClient.get().queueMessage(pck);
 		return true;
-		
-//		if (clientList.isPresent(pck.getReceiver())) {
-//			for (var key : selector.keys()) {
-//				var context = (ServerContext) key.attachment();
-//				if (context == null)
-//					continue;
-//				if (context.isClient(pck.getReceiver())) {
-//					context.queueMessage(pck);
-//					return true;
-//				}
-//			}
-//		}
-//		return false;
 	}
+	
 	
 	public boolean privateConnectionInit(ServerContext senderContext, SendToOne packet) {
 		var sender = packet.getSender();
@@ -256,39 +254,33 @@ public class Server {
 		if(optionalClient.isEmpty()) {
 			return false;
 		}
-		// optional_client.get().queueMessage(packet);
-		var receiverContext = optionalClient.get();
-		
+		var receiverContext = optionalClient.get();		
 		if(receiverContext.addRequester(sender)) {
 			senderContext.addRequester(receiver);
 			receiverContext.queueMessage(packet);
 			return true;
 		}
-		// TODO ENVOYER MESSAGE DEJA CONNECTER
 		return true;
 		
-		
-//		if (clientList.isPresent(packet.getReceiver())) {
-//			for (var key : selector.keys()) {
-//				var context = (ServerContext) key.attachment();
-//				if (context == null)
-//					continue;
-//				if (context.isClient(packet.getReceiver()) && context.addRequester(packet.getSender())) {
-//					context.queueMessage(packet);
-//					return true;
-//				}
-//				if (context.isClient(packet.getReceiver()) && !context.addRequester(packet.getSender())){
-//					// TODO
-//					// Envoyer message d'erreur parce que déjà demandé ou ignorer la demande 
-//					return true;
-//				}
-//			}
-//		}
-//		return false;
+	}
+	
+	/**
+	 * 
+	 * @param pck
+	 */
+	public void disabledConnectionTry(ServerContext senderContext, SendToOne packet) {
+		var sender = packet.getSender();
+		var receiver = packet.getReceiver();
+		var optionalClient = clientList.getClient(receiver);
+		if(optionalClient.isEmpty()) {
+			return;
+		}
+		var receiverContext = optionalClient.get();
+		senderContext.removeRequester(receiver);
+		receiverContext.removeRequester(sender);
 	}
 
-	// Ajout d'une méthode unicast-like pour envoyer des réponses uniquement aux
-	// interessés
+
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 1) {
@@ -301,6 +293,8 @@ public class Server {
 	private static void usage() {
 		System.out.println("Usage : ServerSumBetter port");
 	}
+	
+	
 
 	////////////////// DEBUG //////////////////////
 
@@ -336,7 +330,7 @@ public class Server {
 				System.out.println("\tKey for ServerSocketChannel : " + interestOpsToString(key));
 			} else {
 				SocketChannel sc = (SocketChannel) channel;
-				System.out.println("\tKey for Client " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
+				System.out.println("\tKey for Client " +  "Active : " + ((ServerContext)key.attachment()).isActive() + " " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
 				if(key.attachment() != null ) {
 					System.out.println("\tAttachment Type: " + key.attachment().getClass());
 				} else {
@@ -361,7 +355,7 @@ public class Server {
 		} else {
 			SocketChannel sc = (SocketChannel) channel;
 			System.out.println(
-					"\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
+					"\tClient " + "Active : " + ((ServerContext)key.attachment()).isActive() + " " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
 		}
 	}
 

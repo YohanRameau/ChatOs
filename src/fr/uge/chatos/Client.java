@@ -27,6 +27,7 @@ import fr.uge.chatos.frametypes.Private_msg;
 import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.frametypes.Refusal_co_private;
 import fr.uge.chatos.frametypes.Request_co_private;
+import fr.uge.chatos.observer.ConsoleObserver;
 
 public class Client {
 
@@ -42,9 +43,8 @@ public class Client {
 	private final Map<String, PrivateClientContext> privateConnectionMap = new HashMap<>();
 	private ClientContext mainContext;
 
-	enum MessageType {
-		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE, ACCEPT, REFUSE, ERROR
-	}
+
+	
 
 	public Client(String login, InetSocketAddress serverAddress) throws IOException {
 		this.serverAddress = serverAddress;
@@ -83,6 +83,7 @@ public class Client {
 	 */
 
 	private void processStandardInput(String msg) throws InterruptedException {
+		System.out.println("msg process " + msg);
 		commandQueue.add(msg);
 		selector.wakeup();
 	}
@@ -121,111 +122,6 @@ public class Client {
 		}
 	}
 	
-	
-	/**
-	 * Encode a public message into a ByteBuffer and transfer it on the server
-	 * context.
-	 * 
-	 * @param message to publicly send
-	 */
-	private void sendPublicMessage(String message) {
-		mainContext.queueMessage(new Public_msg(login, message));
-	}
-
-	/**
-	 * Encode a private message into a ByteBuffer and transfer it on the server
-	 * context
-	 * 
-	 * @param input to parse containing login and private message
-	 */
-	private void sendPrivateMessage(String input) {
-		String[] tokens = input.split(" ", 2);
-		if (tokens.length != 2) {
-			System.out.println(
-					"Parsing error: the input have a bad format. @login message for private message");
-			return;
-		}
-		if (tokens[0].equals(login)) {
-			// TODO CANNOT SEND A PRIVATE MESSAGE FOR HIMSELF.
-			System.out.println("You cannot send a private message for youself");
-			return;
-		}
-		mainContext.queueMessage(new Private_msg(login, tokens[0], tokens[1]));
-	}
-
-	/**
-	 * Add a private connection message to the client's queue
-	 * 
-	 * @param login of the client
-	 * @param message to send
-	 * @return boolean 
-	 */
-	private void queuePrivateConnectionMessage(PrivateClientContext pctx, String message) {
-		pctx.queueMessage(new PrivateConnectionMessage(message, pctx.getId()));
-	}
-	
-	
-	/**
-	 * Send a private connection request to another user
-	 * 
-	 * @param input to parse containing login and private message 
-	 */
-	private void sendPrivateConnectionRequest(String input) {
-		String[] tokens = input.split(" ", 2);
-		if (tokens.length != 1 && tokens.length != 2) {
-			System.out.println(
-					"Parsing error: the input have a bad format. /login message for private connection request");
-			return;
-		}
-		if(tokens[0].equals(login)) {
-			System.out.println("YOU CANNOT SEND A PRIVATE request FOR YOURSELF.");
-			return;
-		}
-		
-		var pctx = privateConnectionMap.get(tokens[0]);
-		
-		if (pctx == null) {
-			mainContext.queueMessage(new Request_co_private(login, tokens[0]));
-		} 
-		else if(pctx != null && tokens.length == 1) {	
-			System.out.println("Private connection with " + tokens[0] + " is finish.");
-			pctx.silentlyClose();
-		}else {
-			queuePrivateConnectionMessage(pctx, tokens[1]);
-		}	
-	}
-	
-
-	/**
-	 * Send a positive answer to a private connection request
-	 * 
-	 * @param input to parse containing login and private message
-	 */
-	private void sendPrivateConnectionAcceptance(String input) {
-		String[] tokens = input.split(" ", 2);
-		if(!requesters.contains(tokens[1])) {
-			System.out.println(tokens[1] + " don't ask you for a private connection.");
-			return;
-		}
-		mainContext.queueMessage(new Accept_co_private(login, tokens[1]));
-	}
-
-	/**
-	 * Send a negative answer to a private connection request
-	 * 
-	 * @param input to parse containing login and private message
-	 */
-	private void sendPrivateConnectionRefusal(String input) {
-		String[] tokens = input.split(" ", 2);
-		if(!requesters.contains(tokens[1])) {
-			System.out.println(tokens[1] + " don't ask you for a private connection.");
-			
-			return;
-		}
-		mainContext.queueMessage(new Refusal_co_private(login, tokens[1]));
-	}
-	
-	
 	/**
 	 * Initialize a private connection
 	 * 
@@ -243,83 +139,6 @@ public class Client {
 		privateConnectionMap.put(receiver, ctx);
 	}
 	
-	
-	/**
-	 * Register client into a private connection map
-	 * 
-	 * @param login of the client to register
-	 * @param ctx the context to add to the map
-	 */
-	public void registerLogin(String login, PrivateClientContext ctx){
-		privateConnectionMap.put(login, ctx);
-	}
-
-	/**
-	 * Parse an input to determinate the type of command
-	 * 
-	 * @param msg to parse
-	 */
-	private MessageType parseStandardInput(String msg) {
-		Objects.requireNonNull(msg);
-		if (msg.length() > 0) {
-			switch (msg.charAt(0)) {
-			case '@':
-				return MessageType.PRIVATE_MESSAGE;
-			case '/':
-				return MessageType.PRIVATE_REQUEST;
-			case '\\':
-				String[] tokens = msg.split(" ", 2);
-				if (tokens.length != 2) {
-					return MessageType.ERROR;
-				}
-				switch (tokens[0].toLowerCase()) {
-				case "\\yes":
-					return MessageType.ACCEPT;
-				case "\\no":
-					return MessageType.REFUSE;
-				default:
-					return MessageType.REFUSE;
-				}
-			default:
-				return MessageType.PUBLIC_MESSAGE;
-			}
-		}
-		return MessageType.PUBLIC_MESSAGE;
-	}
-
-	/**
-	 * Determinate and process the command receive on the commandQueue by the
-	 * Console Thread. The command can be a public message, a private message or a
-	 * private connection request.
-	 */
-	public void processCommands() {
-		if (commandQueue.isEmpty()) {
-			return;
-		}
-		String msg = commandQueue.remove();
-		switch (parseStandardInput(msg)) {
-		case PUBLIC_MESSAGE:
-			sendPublicMessage(msg);
-			break;
-		case PRIVATE_MESSAGE:
-			sendPrivateMessage(msg.substring(1));
-			break;
-		case PRIVATE_REQUEST:
-			sendPrivateConnectionRequest(msg.substring(1));
-			break;
-		case ACCEPT:
-			sendPrivateConnectionAcceptance(msg.substring(1));
-			break;
-		case REFUSE:
-			sendPrivateConnectionRefusal(msg.substring(1));
-			break;
-		case ERROR:
-			System.out.println("Unknown command");
-			break;
-		}
-	}
-
-	
 	/**
 	 * Launch the client
 	 */
@@ -330,11 +149,12 @@ public class Client {
 		key.attach(mainContext);
 		sc.connect(serverAddress);
 		console.start();
+		ConsoleObserver observer = new ConsoleObserver(this, login, requesters, mainContext, privateConnectionMap, commandQueue);
 		while (!Thread.interrupted()) {
 			// printKeys();
 			try {
 				selector.select(this::treatKey);
-				processCommands();
+				observer.observe();
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
@@ -423,6 +243,10 @@ public class Client {
 			list.add("WRITE");
 		return String.join(" and ", list);
 	}
+	
+	
+	
+/////////////////////////////////////////      MAIN      ////////////////////////////////////////////	
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 3) {

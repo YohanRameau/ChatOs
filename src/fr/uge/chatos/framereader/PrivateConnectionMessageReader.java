@@ -56,6 +56,8 @@ public class PrivateConnectionMessageReader implements Reader<PrivateConnectionM
 		}
 		switch(lr.process(bb)) {
 		case DONE:
+			id = lr.get();
+			lr.reset();
 			state = successState;
 			return ProcessStatus.DONE;
 		case REFILL:

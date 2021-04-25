@@ -12,9 +12,6 @@ public class RefusalReader implements Reader<Refusal>{
 	private StringReader sr = new StringReader();
 	private String sender;
 	
-//	private ProcessStatus getAnswer(ByteBuffer bb) {
-//		return getSender(bb, State.DONE);
-//	}
 	
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {

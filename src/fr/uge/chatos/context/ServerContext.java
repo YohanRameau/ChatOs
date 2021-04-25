@@ -19,16 +19,18 @@ import fr.uge.chatos.visitor.ServerFrameVisitor;
 
 public class ServerContext implements Context{
 	private static int BUFFER_SIZE = 1024;
+	private static int QUEUE_SIZE = 20;
 	final private SelectionKey key;
 	final private SocketChannel sc;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-	final private LimitedQueue<Frame> queue = new LimitedQueue<>(20);
+	final private LimitedQueue<Frame> queue = new LimitedQueue<>(QUEUE_SIZE);
 	final private Server server;
 	private final FrameReader frameReader = new FrameReader();
 	private final ClientList clientList;
 	private final ArrayList<String> requesters = new ArrayList<String>();
 	private boolean closed = false;
+	private boolean activeSinceLastTimeoutCheck = true;
 	private ServerFrameVisitor visitor;
 	private Frame pck; 
 	private String login;
@@ -45,6 +47,18 @@ public class ServerContext implements Context{
 		return this.login.equals(login);
 	}
 	
+	public boolean isActive() {
+		return activeSinceLastTimeoutCheck;
+	}
+	
+	public void setInactive() {
+		activeSinceLastTimeoutCheck = false;
+	}
+	
+	public boolean fulledQueue() {
+		return queue.size() == QUEUE_SIZE;
+	}
+	
 	public void sendPrivatePacket(Frame frame ,long id) {
 		var tmp = server.getPrivateConnectionInfo(id);
 		if(tmp.isEmpty()) {
@@ -55,8 +69,7 @@ public class ServerContext implements Context{
 		var pci = tmp.get();
 		// server.sendToOtherCLient(id, this, frame)
 		// TODO Finir les méthodes de PrivateConnectionInfo
-		
-		
+			
 	}
 	
 
@@ -100,6 +113,7 @@ public class ServerContext implements Context{
 	}
 	
 	public void askPrivateConnection(SendToOne pck) {
+		System.out.println(requesters);
 		if(requesters.contains(pck.getReceiver())) {
 			// TODO SEND ERROR PACKET WITH OP CODE CORRESPONDING TO ALREADY ASK
 			System.out.println(pck.getSender() + " already ask a private Connection " + pck.getReceiver());
@@ -111,9 +125,11 @@ public class ServerContext implements Context{
 			queueMessage(unknown_user);
 			return;
 		};
-		
 	}
 	
+	public boolean isRequester(String login) {
+		return requesters.contains(login);
+	}
 	
 	
 	public boolean addRequester(String login) {
@@ -139,9 +155,7 @@ public class ServerContext implements Context{
 	public void processIn() {
 		switch (frameReader.process(bbin)) {
 		case DONE:
-			System.out.println("DONE PROCESS IN");
 			pck = frameReader.get();
-			System.out.println("End get");
 			treatFrame(pck);
 			frameReader.reset();
 			break;
@@ -231,6 +245,7 @@ public class ServerContext implements Context{
 	 */
 	@Override
 	public void doRead() throws IOException {
+		activeSinceLastTimeoutCheck = true;
 		if (sc.read(bbin) == -1) {
 			closed = true;
 		}
@@ -248,7 +263,7 @@ public class ServerContext implements Context{
 	 */
 	@Override
 	public void doWrite() throws IOException {
-		System.out.println("DO WRITE SERVER CONTEXT PRIVATE");
+		activeSinceLastTimeoutCheck = true;
 		bbout.flip();
 		sc.write(bbout);
 		bbout.compact();

@@ -64,27 +64,9 @@ public class RefusalCoPrivateReader implements Reader<Refusal_co_private>{
 		}
 	}
 	
-//	private ProcessStatus getRequestConnexion(ByteBuffer bb) {
-//		if (state == State.DONE || state == State.ERROR) {
-//			throw new IllegalStateException();
-//		}
-//
-//		// SENDER
-//		if (state == State.WAITING_SENDER) {
-//			getSender(bb, State.WAITING_RECEIVER);
-//		}
-//
-//		// RECEIVER
-//		if (state == State.WAITING_RECEIVER) {
-//			return getReceiver(bb, State.DONE);
-//		}
-//		return ProcessStatus.ERROR;
-//
-//	}
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST REFUSAL CO PRIVATE");
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}

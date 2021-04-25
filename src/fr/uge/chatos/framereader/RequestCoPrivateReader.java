@@ -83,7 +83,6 @@ public class RequestCoPrivateReader implements Reader<Request_co_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST CO PRIVATE");
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}

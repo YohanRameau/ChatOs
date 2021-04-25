@@ -14,6 +14,7 @@ public class IdPrivateReader implements Reader<Id_private>{
 	private LongReader lr = new LongReader();
 	private String sender;
 	private String receiver;
+	private long id;
 	
 	private ProcessStatus getId(ByteBuffer bb) {
 		if(state != State.WAITING_ID) {
@@ -22,6 +23,7 @@ public class IdPrivateReader implements Reader<Id_private>{
 		switch(lr.process(bb)) {
 		case DONE:
 			state = State.DONE;
+			id = lr.get();
 			return ProcessStatus.DONE;
 		case REFILL:
 			state = State.WAITING_ID;
@@ -108,7 +110,6 @@ public class IdPrivateReader implements Reader<Id_private>{
 	
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST ID PRIVATE");
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
@@ -136,7 +137,7 @@ public class IdPrivateReader implements Reader<Id_private>{
 		if(state != State.DONE) {
 			throw new IllegalStateException("Get but state not DONE.");
 		}
-		return new Id_private(sender, receiver, lr.get());
+		return new Id_private(sender, receiver, id);
 	}
 	
 	@Override

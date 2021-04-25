@@ -31,7 +31,6 @@ public class ServerContextPrivate implements Context{
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
 		this.visitor = new ServerPrivateFrameVisitor(server, this);
-		System.out.println("Server Private has been bon vous");
 	}
 	
 	
@@ -76,7 +75,6 @@ public class ServerContextPrivate implements Context{
 	 * @param msg
 	 */
 	public void queueMessage(Frame msg) {
-		System.out.println("SERVERCONTEXTPRIVATE queuemessage");
 		queue.add(msg.encode());
 		processOut();
 		updateInterestOps();
@@ -117,7 +115,6 @@ public class ServerContextPrivate implements Context{
 			newInterestOps |= SelectionKey.OP_READ;
 		}
 		if (bbout.position() != 0) {
-			System.out.println("SERVERCONTEXTPRIVATE ready write");
 			newInterestOps |= SelectionKey.OP_WRITE;
 		}
 		if (newInterestOps == 0) {
@@ -162,7 +159,6 @@ public class ServerContextPrivate implements Context{
 	 */
 	@Override
 	public void doWrite() throws IOException {
-		System.out.println("Do write by server context private ");
 		bbout.flip();
 		sc.write(bbout);
 		bbout.compact();

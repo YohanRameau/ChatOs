@@ -14,6 +14,7 @@ import fr.uge.chatos.frametypes.Public_msg;
 import fr.uge.chatos.frametypes.Refusal_co_private;
 import fr.uge.chatos.frametypes.Request_co_private;
 import fr.uge.chatos.frametypes.Request_co_server;
+import fr.uge.chatos.frametypes.SendToOne;
 
 public class ServerFrameVisitor implements FrameVisitor{
 
@@ -46,15 +47,17 @@ public class ServerFrameVisitor implements FrameVisitor{
 	@Override
 	public void visit(Accept_co_private pck) {
 		closeIfNotPublicConnection();
-		
-		long id = server.initializedPrivateconnection();
 		var sender = pck.getSender();
 		var receiver = pck.getReceiver();
+		if(ctx.isRequester(sender)) {
+			return;
+		}
+		long id = server.initializedPrivateconnection();
+		System.out.println("VISIT ID : " + id);
 		var idPrivate1 = new Id_private(sender, receiver, id);
 		var idPrivate2 = new Id_private(receiver, sender, id);
 		ctx.unicastOrUnknow(idPrivate1);
 		ctx.unicastOrUnknow(idPrivate2);
-		
 	}
 
 	@Override
@@ -79,7 +82,6 @@ public class ServerFrameVisitor implements FrameVisitor{
 	@Override
 	public void visit(Public_msg pck) {
 		closeIfNotPublicConnection();
-		System.out.println("Visit server visitor " + pck.getSender() + " " + pck.getMessage());
 		server.broadcast(pck);		
 	}
 
@@ -87,6 +89,7 @@ public class ServerFrameVisitor implements FrameVisitor{
 	public void visit(Refusal_co_private pck) {
 		closeIfNotPublicConnection();
 		ctx.unicastOrUnknow(pck);
+		server.disabledConnectionTry(ctx, pck);
 	}
 
 	@Override

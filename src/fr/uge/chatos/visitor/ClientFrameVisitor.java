@@ -77,20 +77,21 @@ public class ClientFrameVisitor implements FrameVisitor{
 	public void visit(Request_co_private pck){
 		System.out.println(pck.getSender() + " Sent you a private connexion request | Accept (\\yes login) or Decline (\\no login) ?");
 		client.addPrivateRequester(pck.getSender());
-		client.processCommands();
+		//client.processCommands();
 	}
 	
 	@Override
 	public void visit(Refusal_co_private pck) {
 		System.out.println("The private connexion request has been refused by "+pck.getSender());
-		client.removePrivateRequester(pck.getSender());
+		
+		//client.removePrivateRequester(pck.getSender());
 	}
 	
-	@Override
-	public void visit(Accept_co_private pck) {
-		System.out.println("The private connexion request has been accepted by "+pck.getSender());
-		client.removePrivateRequester(pck.getSender());
-	}
+//	@Override
+//	public void visit(Accept_co_private pck) {
+//		System.out.println("The private connexion request has been accepted by "+pck.getSender());
+//		//client.removePrivateRequester(pck.getSender());
+//	}
 	
 	@Override
 	public void visit(Unknown_user unknown_user) {

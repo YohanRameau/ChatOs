@@ -22,18 +22,6 @@ public class PrivateConnectionMessage implements Frame{
 		visitor.visit(this);
 	}
 
-//	public static ByteBuffer encodeString(String string) {
-//		
-//		var stringBb = UTF8.encode(string);
-//		int senderBbSize = stringBb.remaining();
-//		var bb = ByteBuffer.allocate(Integer.BYTES + senderBbSize);
-//		bb.putInt(senderBbSize);
-//		bb.put(stringBb);
-//		bb.flip();
-//		return bb;
-
-//	}
-
 	
 	public long getId() {
 		return id;

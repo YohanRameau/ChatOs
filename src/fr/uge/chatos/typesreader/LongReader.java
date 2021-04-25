@@ -35,7 +35,7 @@ public class LongReader implements Reader<Long> {
         }
         state=State.DONE;
         internalbb.flip();
-        value=internalbb.getInt();
+        value=internalbb.getLong();
         return ProcessStatus.DONE;
     }
 
@@ -49,7 +49,7 @@ public class LongReader implements Reader<Long> {
 
     @Override
     public void reset() {
-        state= State.WAITING;
+        state = State.WAITING;
         internalbb.clear();
     }
 }
