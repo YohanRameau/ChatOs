@@ -3,50 +3,93 @@ package fr.uge.chatos;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
+import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.ServerContext;
-import fr.uge.chatos.core.BuildPacket;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+import fr.uge.chatos.core.Frame;
+import fr.uge.chatos.frametypes.SendToAll;
+import fr.uge.chatos.frametypes.SendToOne;
 
 public class Server {
 
-	static class PrivateConnectionInfo {
+	public static class PrivateConnectionsInformations {
+		@SuppressWarnings("unused")
 		private final long id;
-		private final InetSocketAddress firstAddress;
-		private final InetSocketAddress secondAddress;
-		private Context firstContext;
-		private Context secondContext;
+		private ServerContext firstContext = null;
+		private ServerContext secondContext = null;
 
-		public PrivateConnectionInfo(long id, InetSocketAddress frst, InetSocketAddress scnd) {
+		public PrivateConnectionsInformations(long id) {
 			this.id = id;
-			this.firstAddress = frst;
-			this.secondAddress = scnd;
+		}
+		
+		public boolean initialized() {
+			return firstContext != null && secondContext != null;
+		}
+		
+		public boolean registerClient(ServerContext ctx) {
+			if(firstContext == null) {
+				firstContext = ctx;
+				return true;
+			} 
+			else if( secondContext == null) {
+				secondContext = ctx;
+				return true;
+			}
+			return false;
+		}
+		
+		private Optional<ServerContext> getOtherContext(ServerContext sctx) {
+
+			ServerContext result = null;
+			
+			if(sctx == firstContext) {
+				result = secondContext;
+			} else if (sctx == secondContext ) {
+				result =  firstContext;
+			}
+			return Optional.ofNullable(result);
+		}
+		
+		public void edgeSending(ServerContext context, Frame frame) {
+			var optional_ctx = getOtherContext(context);
+			if(optional_ctx.isEmpty()) {
+				context.silentlyClose();
+			} 
+			var other_ctx = optional_ctx.get();
+			other_ctx.queueMessage(frame);
 		}
 	}
 
-	static private final int BUFFER_SIZE = 1_024;
 	static private final Logger logger = Logger.getLogger(Server.class.getName());
-
-	private final AtomicLong privateConnectionCompt = new AtomicLong();
+	static private final long TIMEOUT = 1000 * 60 * 5; // 5 minutes timeout 
+	static private final String BANNER = "\n"
+			+ "───────────────────────────────────────────────────────────────────────────────────────────\n"
+			+ "─██████████████─██████──██████─██████████████─██████████████─██████████████─██████████████─\n"
+			+ "─██░░░░░░░░░░██─██░░██──██░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─\n"
+			+ "─██░░██████████─██░░██──██░░██─██░░██████░░██─██████░░██████─██░░██████░░██─██░░██████████─\n"
+			+ "─██░░██─────────██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██──██░░██─██░░██─────────\n"
+			+ "─██░░██─────────██░░██████░░██─██░░██████░░██─────██░░██─────██░░██──██░░██─██░░██████████─\n"
+			+ "─██░░██─────────██░░░░░░░░░░██─██░░░░░░░░░░██─────██░░██─────██░░██──██░░██─██░░░░░░░░░░██─\n"
+			+ "─██░░██─────────██░░██████░░██─██░░██████░░██─────██░░██─────██░░██──██░░██─██████████░░██─\n"
+			+ "─██░░██─────────██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██──██░░██─────────██░░██─\n"
+			+ "─██░░██████████─██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██████░░██─██████████░░██─\n"
+			+ "─██░░░░░░░░░░██─██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░░░░░░░░░██─██░░░░░░░░░░██─\n"
+			+ "─██████████████─██████──██████─██████──██████─────██████─────██████████████─██████████████─\n"
+			+ "───────────────────────────────────────────────────────────────────────────────────────────";
+	
+	
+	private long privateConnectionCompt = 0;
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final ClientList clientList = new ClientList();
 
-	private final Map<Long, PrivateConnectionInfo> PrivateConnectionMap = new HashMap<>();
+	private final Map<Long, PrivateConnectionsInformations> privateConnectionMap = new HashMap<>();
 
 	public Server(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
@@ -54,23 +97,82 @@ public class Server {
 		selector = Selector.open();
 	}
 
+	/**
+	 * Launch the server
+	 */
 	public void launch() throws IOException {
+		System.out.println(BANNER);
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-		while (!Thread.interrupted()) {
+		long startTimer = System.currentTimeMillis(); 
+		while (!Thread.interrupted()) {		
 			printKeys(); // for debug
 			try {
-				selector.select(this::treatKey);
+				selector.select(this::treatKey, TIMEOUT);
+				long timeSinceLastcheck = (System.currentTimeMillis() - startTimer) ;
+				if(TIMEOUT < timeSinceLastcheck) {
+					checkInactiveClient();
+					startTimer = System.currentTimeMillis();
+				}
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
 		}
 	}
-
+	
 	public long generateId() {
-		return privateConnectionCompt.getAndIncrement();
+		long res = privateConnectionCompt;
+		privateConnectionCompt += 1; 
+		return res;
 	}
+	
+	public Optional<PrivateConnectionsInformations> getPrivateConnectionInfo(long id) {
+		return Optional.ofNullable(privateConnectionMap.get(id));
+	}
+	
+	public long initializedPrivateconnection() {
+		var id = generateId();
+		privateConnectionMap.put(id, new PrivateConnectionsInformations(id));
+		return id;
+	}
+	
+	public boolean registerPrivateConnection(long id, ServerContext ctx) {
 
+		var clientInfo = privateConnectionMap.get(id);
+		if(clientInfo == null) {
+
+			ctx.silentlyClose();
+			return false;
+		}
+		if(clientInfo.initialized()) {
+			ctx.silentlyClose();
+			return false;
+		}
+		
+		return clientInfo.registerClient(ctx);
+	}
+	
+	/**
+	 * 
+	 * @param key
+	 */
+	private void disconnectIfInactive(SelectionKey key) {
+		
+		var ctx = (ServerContext) key.attachment();
+		if(ctx == null) {
+			return;
+		} 
+		if(!ctx.isActive() || ctx.fulledQueue()) {
+			ctx.silentlyClose();
+		} else {
+			ctx.setInactive();
+		}
+	}
+	
+	private void checkInactiveClient() {
+		selector.keys().stream().forEach(this::disconnectIfInactive); 
+	}
+	
 	/**
 	 * 
 	 * @param key
@@ -87,10 +189,10 @@ public class Server {
 		}
 		try {
 			if (key.isValid() && key.isWritable()) {
-				((Context) key.attachment()).doWrite();
+				((ServerContext) key.attachment()).doWrite();
 			}
 			if (key.isValid() && key.isReadable()) {
-				((Context) key.attachment()).doRead();
+				((ServerContext) key.attachment()).doRead();
 			}
 		} catch (IOException e) {
 			logger.log(Level.INFO, "Connection closed with client due to IOException", e);
@@ -131,7 +233,9 @@ public class Server {
 	 *
 	 * @param msg
 	 */
-	public void broadcast(Packet packet) {
+	public void broadcast(SendToAll packet) {
+		
+		
 		for (var key : selector.keys()) {
 			var context = (ServerContext) key.attachment();
 			if (context == null || context.privateConnection() == true) {
@@ -146,43 +250,49 @@ public class Server {
 	 *
 	 * @param msg
 	 */
-	public boolean unicast(Packet packet) {
-		if (clientList.isPresent(packet.getReceiver())) {
-			for (var key : selector.keys()) {
-				var context = (ServerContext) key.attachment();
-				if (context == null)
-					continue;
-				if (context.isClient(packet.getReceiver())) {
-					context.queueMessage(packet);
-					return true;
-				}
-			}
+	public boolean unicast(SendToOne pck) {
+		
+		var optionalClient = clientList.getClient(pck.getReceiver());
+		if(optionalClient.isEmpty()) {
+			return false;
 		}
-		return false;
+		optionalClient.get().queueMessage(pck);
+		return true;
 	}
 	
-	public boolean privateUnicast(Packet packet) {
-		if (clientList.isPresent(packet.getReceiver())) {
-			for (var key : selector.keys()) {
-				var context = (ServerContext) key.attachment();
-				if (context == null)
-					continue;
-				if (context.isClient(packet.getReceiver()) && context.addRequester(packet.getSender())) {
-					context.queueMessage(packet);
-					return true;
-				}
-				if (context.isClient(packet.getReceiver()) && !context.addRequester(packet.getSender())){
-					// TODO
-					// Envoyer message d'erreur parce que déjà demandé ou ignorer la demande 
-					return true;
-				}
-			}
+	
+	public boolean privateConnectionInit(ServerContext senderContext, SendToOne packet) {
+		var sender = packet.getSender();
+		var receiver = packet.getReceiver();
+		var optionalClient = clientList.getClient(receiver);
+		if(optionalClient.isEmpty()) {
+			return false;
 		}
-		return false;
-	}
+		var receiverContext = optionalClient.get();		
+		if(receiverContext.addRequester(sender)) {
+			senderContext.addRequester(receiver);
+			receiverContext.queueMessage(packet);
+			return true;
+		}
+		return true;
 
-	// Ajout d'une méthode unicast-like pour envoyer des réponses uniquement aux
-	// interessés
+	}
+	
+	/**
+	 * 
+	 * @param pck
+	 */
+	public void disabledConnectionTry(ServerContext senderContext, SendToOne packet) {
+		var sender = packet.getSender();
+		var receiver = packet.getReceiver();
+		var optionalClient = clientList.getClient(receiver);
+		if(optionalClient.isEmpty()) {
+			return;
+		}
+		var receiverContext = optionalClient.get();
+		senderContext.removeRequester(receiver);
+		receiverContext.removeRequester(sender);
+	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 1) {
@@ -195,6 +305,8 @@ public class Server {
 	private static void usage() {
 		System.out.println("Usage : ServerSumBetter port");
 	}
+	
+	
 
 	////////////////// DEBUG //////////////////////
 
@@ -230,7 +342,12 @@ public class Server {
 				System.out.println("\tKey for ServerSocketChannel : " + interestOpsToString(key));
 			} else {
 				SocketChannel sc = (SocketChannel) channel;
-				System.out.println("\tKey for Client " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
+				System.out.println("\tKey for Client " +  "Active : " + ((ServerContext)key.attachment()).isActive() + " " + remoteAddressToString(sc) + " : " + interestOpsToString(key));
+				if(key.attachment() != null ) {
+					System.out.println("\tAttachment Type: " + key.attachment().getClass());
+				} else {
+					System.out.println("\tNo attachment");
+				}
 			}
 		}
 	}
@@ -250,7 +367,7 @@ public class Server {
 		} else {
 			SocketChannel sc = (SocketChannel) channel;
 			System.out.println(
-					"\tClient " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
+					"\tClient " + "Active : " + ((ServerContext)key.attachment()).isActive() + " " + remoteAddressToString(sc) + " can perform : " + possibleActionsToString(key));
 		}
 	}
 

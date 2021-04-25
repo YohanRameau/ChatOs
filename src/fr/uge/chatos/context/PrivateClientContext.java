@@ -6,10 +6,12 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 import fr.uge.chatos.Client;
-import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+import fr.uge.chatos.framereader.FrameReader;
+import fr.uge.chatos.frametypes.Login_private;
+import fr.uge.chatos.frametypes.PrivateConnectionMessage;
+import fr.uge.chatos.visitor.ClientPrivateFrameVisitor;
 
 public class PrivateClientContext implements Context {
 	static private int BUFFER_SIZE = 10_000;
@@ -18,11 +20,13 @@ public class PrivateClientContext implements Context {
 	final private SocketChannel sc;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
+	@SuppressWarnings("unused")
 	final private Client client;
 	final private LimitedQueue<ByteBuffer> queue = new LimitedQueue<>(20);
-	final private PacketReader packetReader = new PacketReader();
+	final private FrameReader frameReader = new FrameReader();
+	private ClientPrivateFrameVisitor visitor;
 	final private String login;
-	private Packet pck;
+	private Frame pck;
 	private final long id;
 	private boolean closed = false;
 
@@ -32,8 +36,28 @@ public class PrivateClientContext implements Context {
 		this.login = login;
 		this.client = client;
 		this.id = id;
+		this.visitor = new ClientPrivateFrameVisitor(client, this);
 	}
 
+	/**
+	 * Call the frame's specific visitor to apply actions
+	 * 
+	 * @param frame The frame to be treated
+	 *
+	 */
+	private void treatFrame(Frame frame) {
+		frame.accept(visitor);
+	}
+	
+	/**
+	 * Get the client's unique ID
+	 * 
+	 *
+	 */
+	public long getId() {
+		return id;
+	}
+	
 	/**
 	 * Process the content of bbin
 	 *
@@ -45,11 +69,11 @@ public class PrivateClientContext implements Context {
 	 */
 	public void processIn() throws IOException {
 		for (;;) {
-			switch (packetReader.process(bbin)) {
+			switch (frameReader.process(bbin)) {
 			case DONE:
-				pck = packetReader.get();
-				parsePacket();
-				packetReader.reset();
+				pck = frameReader.get();
+				treatFrame(pck);
+				frameReader.reset();
 				break;
 			case REFILL:
 				return;
@@ -61,61 +85,26 @@ public class PrivateClientContext implements Context {
 		}
 	}
 
+	/**
+	 * Send a new login private packet containing the unique client's ID
+	 * 
+	 * @throws IOException
+	 *
+	 */
 	private void sendLoginPrivate() throws IOException {
-		var bb = BuildPacket.loginPrivate(id);
-		queueMessage(bb);
+		var pck = new Login_private(id);
+		queueMessage(pck);
 	}
 
-	void parsePacket() throws IOException {
-		switch (pck.getOpCode()) {
-		case 1:
-			System.out.println("Accepted connexion " + pck.getSender());
-			break;
-		case 2:
-			System.out.println("Refused connexion");
-			closed = true;
-			break;
-		case 3:
-			System.out.println(pck.getSender()
-					+ " Sent you a private connexion request | Accept (\\yes login) or Decline (\\no login) ?");
-			break;
-		case 4:
-			displayMessage(pck);
-			break;
-		case 5:
-			System.out.println("(Private) " + pck.getSender() + ": " + pck.getMessage());
-			break;
-		case 6:
-			System.out.println("The user you try to reach doesn't exist !");
-			break;
-		case 7:
-			System.out.println("User " + pck.getSender() + " has accepted the connexion request !");
-			break;
-		case 8:
-			System.out.println("User " + pck.getSender() + " has refused the connexion request");
-			break;
-		case 9:
-			System.out.println("User " + pck.getSender() + " and User " + pck.getReceiver()
-					+ " have a private connection now with id " + pck.getConnectionId());
-			client.initializePrivateConnection(pck.getConnectionId());
-			client.registerLogin(pck.getSender(), this);
-			break;
-		case 11:
-			System.out.println("Private Connection ESTABLISHED");
-			break;
-		default:
-			silentlyClose();
-			break;
-		}
-
-	}
-
-	void displayMessage(Packet pck) {
-		if (pck.getSender().equals(login)) {
-			System.out.println("Me: " + pck.getMessage());
-			return;
-		} else {
-			System.out.println(pck.getSender() + ": " + pck.getMessage());
+	
+	/**
+	 * Display on the client's console the private message received from a private connexion
+	 *
+	 * @param pck The packet containing the message to display
+	 */
+	public void displayMessage(PrivateConnectionMessage pck) {
+		 {
+			System.out.println("(Private connexion) " + login + " : " + pck.getMessage());
 			return;
 		}
 	}
@@ -125,10 +114,15 @@ public class PrivateClientContext implements Context {
 	 *
 	 * @param bb
 	 */
-	private void queueMessage(ByteBuffer bb) {
-		queue.add(bb);
-		processOut();
-		updateInterestOps();
+	public void queueMessage(Frame msg) {
+		if(!queue.add(msg.encode())) {
+			System.out.println("Disconected : Timeout");
+			silentlyClose();
+		}
+		else {
+			processOut();
+			updateInterestOps();
+		}
 	}
 
 	/**
@@ -213,6 +207,14 @@ public class PrivateClientContext implements Context {
 		updateInterestOps();
 	}
 
+	/**
+	 * Performs the connect action on sc
+	 *
+	 * The convention is that both buffers are in write-mode before the call to
+	 * doConnect and after the call
+	 *
+	 * @throws IOException
+	 */
 	public void doConnect() throws IOException {
 		if (!sc.finishConnect()) {
 			return;

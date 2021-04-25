@@ -8,24 +8,31 @@ import java.util.ArrayList;
 
 import fr.uge.chatos.ClientList;
 import fr.uge.chatos.Server;
-import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.core.Frame;
 import fr.uge.chatos.core.LimitedQueue;
-import fr.uge.chatos.packetreader.Packet;
-import fr.uge.chatos.packetreader.PacketReader;
+import fr.uge.chatos.framereader.FrameReader;
+import fr.uge.chatos.frametypes.Acceptance;
+import fr.uge.chatos.frametypes.Refusal;
+import fr.uge.chatos.frametypes.SendToOne;
+import fr.uge.chatos.frametypes.Unknown_user;
+import fr.uge.chatos.visitor.ServerFrameVisitor;
 
 public class ServerContext implements Context{
 	private static int BUFFER_SIZE = 1024;
+	private static int QUEUE_SIZE = 20;
 	final private SelectionKey key;
 	final private SocketChannel sc;
 	final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 	final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-	final private LimitedQueue<Packet> queue = new LimitedQueue<>(20);
+	final private LimitedQueue<Frame> queue = new LimitedQueue<>(QUEUE_SIZE);
 	final private Server server;
-	private final PacketReader packetReader = new PacketReader();
+	private final FrameReader frameReader = new FrameReader();
 	private final ClientList clientList;
 	private final ArrayList<String> requesters = new ArrayList<String>();
 	private boolean closed = false;
-	private boolean privateConnection; 
+	private boolean activeSinceLastTimeoutCheck = true;
+	private ServerFrameVisitor visitor;
+	private Frame pck; 
 	private String login;
 
 	public ServerContext(Server server, SelectionKey key, ClientList clientlist) {
@@ -33,12 +40,32 @@ public class ServerContext implements Context{
 		this.sc = (SocketChannel) key.channel();
 		this.server = server;
 		this.clientList = clientlist;
+		this.visitor = new ServerFrameVisitor(server, this, key);
 	}
 	
+	/**
+	 * Check if a client is already connected
+	 *
+	 * @param login The name of the client to check
+	 * @return True if the client is connected, else false
+	 */
 	public boolean isClient(String login) {
 		return this.login.equals(login);
 	}
-
+	
+	public boolean isActive() {
+		return activeSinceLastTimeoutCheck;
+	}
+	
+	public void setInactive() {
+		activeSinceLastTimeoutCheck = false;
+	}
+	
+	public boolean fulledQueue() {
+		return queue.size() == QUEUE_SIZE;
+	}
+	
+	
 	/**
 	 * Process the identification if the client is not already connected. Send an
 	 * error if the opCode is not the identification code else it send an acceptance packet.
@@ -46,124 +73,92 @@ public class ServerContext implements Context{
 	 * @param opCode
 	 * @param pck
 	 */
-	private void identificationProcess(String login) {
+	public void identificationProcess(String login) {
 		if (!clientList.isPresent(login)) {
-			clientList.add(login, sc);
+			clientList.add(login, this);
 			this.login = login;
-			var acceptance_pck = new Packet.PacketBuilder((byte) 1, login).build();
+			var acceptance_pck = new Acceptance(login);
 			queueMessage(acceptance_pck);
 			return;
 		}
-		var refusal_pck = new Packet.PacketBuilder((byte) 2, login).build();
+		var refusal_pck = new Refusal(login);
 		queueMessage(refusal_pck);
 		closed = true;
 		return;
 	}
 	
+	/**
+	 * Check if a client has established a private connection
+	 *
+	 * @return True if the client is connected, else false
+	 */
 	@Override
 	public boolean privateConnection() {
-		return privateConnection;
+		return visitor.privateConnection();
 	}
 	
 	/**
 	 * Send an unicast to the receiver or send an unknown packet if the receiver it's not connected.
 	 * @param pck
 	 */
-	private void unicastOrUnknow(Packet pck) {
+	public void unicastOrUnknow(SendToOne pck) {
 		if (!server.unicast(pck)) {
 			
-			var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
+			var unknown_user = new Unknown_user(pck.getSender());
 			queueMessage(unknown_user);
 			return;
 		};
 	}
 	
-	private void askPrivateConnection(Packet pck) {
+	/**
+	 * Try to init a private connection
+	 *
+	 * @param pck The packet containing the answer to a previous private connection attempt
+	 */
+	public void askPrivateConnection(SendToOne pck) {
+		System.out.println(requesters);
 		if(requesters.contains(pck.getReceiver())) {
-			// 
 			System.out.println(pck.getSender() + " already ask a private Connection " + pck.getReceiver());
 			return;
 		}
-		addRequester(pck.getReceiver());
-		if (!server.privateUnicast(pck)) {
+		if (!server.privateConnectionInit(this, pck)) {
 			System.out.println(pck.getSender() + " didnt ask a private connection before " + pck.getReceiver());
-			var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
+			var unknown_user = new Unknown_user(pck.getSender());
 			queueMessage(unknown_user);
 			return;
 		};
 	}
 	
+	public boolean isRequester(String login) {
+		return requesters.contains(login);
+	}
 	
-	
+	/**
+	 * Add a client to the list of the private connection requesters
+	 *
+	 * @param login The name of the client
+	 */
 	public boolean addRequester(String login) {
 		return requesters.add(login);
 	}
 	
+	/**
+	 * Remove a client from the list of the private connection requesters
+	 *
+	 * @param login The name of the client
+	 */
 	public void removeRequester(String login) {
 		requesters.remove(login);
 	}
 	
-
 	/**
-	  Process an action according to the type of packet. If the client is not
-	 * accepted it must to send firstly a connection request (OPCODE -> 0)
-	 *  System.out.println("CLOSED");
-	 * @param pck
+	 * Call the frame's specific visitor to apply actions
+	 * 
+	 * @param frame The frame to be treated
+	 *
 	 */
-	private void processPacket(Packet pck) {
-		switch (pck.getOpCode()) {
-		case 0:
-			identificationProcess(pck.getSender());
-		case 1:
-			// TODO
-			// Connection acceptance
-			break;
-		case 2:
-			// TODO
-			// Connection refusal
-			break;
-		case 3:
-			askPrivateConnection(pck);
-			//unicastOrUnknow(pck);
-			//  (login 1, login 2)
-			// Specific connection request
-			break;
-		case 4:
-			server.broadcast(pck);
-			// public message -> broadcast into all connected client contextqueue
-			break;
-		case 5:
-			unicastOrUnknow(pck);
-			// private message -> unicast for a specific connected client.
-			break;
-		case 7:
-			long id = server.generateId();
-			var idPrivate1 = new Packet.PacketBuilder((byte)9, pck.getSender()).setReceiver(pck.getReceiver()).setConnectionId(id).build();
-			var idPrivate2 = new Packet.PacketBuilder((byte)9, pck.getReceiver()).setReceiver(pck.getSender()).setConnectionId(id).build();
-			unicastOrUnknow(idPrivate1);
-			unicastOrUnknow(idPrivate2);
-			break;
-			//TODO
-		case 8:
-			if (!server.unicast(pck)) {
-				var unknown_user = new Packet.PacketBuilder((byte) 6, login).build();
-				queueMessage(unknown_user);
-				return;
-			};
-			break;
-			
-		case 9:
-			privateConnection = true;
-			System.out.println("RECU PACKET  Login private ID: " + pck.getConnectionId());			
-			break;
-		case 10:
-			var establishedPck = new Packet.PacketBuilder().setOpCode((byte) 11).build();
-			queueMessage(establishedPck);
-			break;
-			// TODO vérification de la personne ce paquet pour ne pas usurper une connection privée.
-		default:
-			// TODO
-		}
+	private void treatFrame(Frame frame) {
+		frame.accept(visitor);
 	}
 
 	/**
@@ -174,16 +169,14 @@ public class ServerContext implements Context{
 	 *
 	 */
 	public void processIn() {
-		switch (packetReader.process(bbin)) {
+		switch (frameReader.process(bbin)) {
 		case DONE:
-			processPacket(packetReader.get());
-			packetReader.reset();
+			pck = frameReader.get();
+			treatFrame(pck);
+			frameReader.reset();
 			break;
 		case REFILL:
 			return;
-//            case RETRY:
-//            	packetReader.reset();
-//            	return;
 		case ERROR:
 			closed = true;
 			return;
@@ -195,7 +188,7 @@ public class ServerContext implements Context{
 	 *
 	 * @param msg
 	 */
-	public void queueMessage(Packet msg) {
+	public void queueMessage(Frame msg) {
 		queue.add(msg);
 		processOut();
 		updateInterestOps();
@@ -212,7 +205,7 @@ public class ServerContext implements Context{
 				return;
 			}
 			var pck = queue.peek();
-			var bb = BuildPacket.encode(pck);
+			var bb = pck.encode();
 			if (bbout.remaining() < bb.remaining()) {
 				return;
 			}
@@ -265,6 +258,7 @@ public class ServerContext implements Context{
 	 */
 	@Override
 	public void doRead() throws IOException {
+		activeSinceLastTimeoutCheck = true;
 		if (sc.read(bbin) == -1) {
 			closed = true;
 		}
@@ -282,6 +276,7 @@ public class ServerContext implements Context{
 	 */
 	@Override
 	public void doWrite() throws IOException {
+		activeSinceLastTimeoutCheck = true;
 		bbout.flip();
 		sc.write(bbout);
 		bbout.compact();

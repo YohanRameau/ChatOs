@@ -1,13 +1,21 @@
 package fr.uge.chatos;
 
-import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+
+import fr.uge.chatos.context.ServerContext;
 
 public class ClientList {
 
-	private final Map<String, SocketChannel> clients = new HashMap<String, SocketChannel>();
+	private final Map<String, ServerContext> clients = new HashMap<String, ServerContext>();
 	
+	/**
+	 * Determine if a client is already connected to the server
+	 * 
+	 * @param client the login to check
+	 * @return boolean true if present, false else
+	 */
 	public boolean isPresent(String client) {
 		for (String keys : clients.keySet())
 		{
@@ -18,10 +26,25 @@ public class ClientList {
 		return false;
 	}
 	
-	public void add(String client, SocketChannel sc) {
-		clients.putIfAbsent(client, sc);
+	public Optional<ServerContext> getClient(String login) {
+		return Optional.ofNullable(clients.get(login));
+	}
+
+	/**
+	 * Add a client to the connected list if not already present
+	 * 
+	 * @param client the login to add
+	 * @param ctx the context to add to the map
+	 */
+	public void add(String client, ServerContext ctx) {
+		clients.putIfAbsent(client, ctx);
 	}
 	
+	/**
+	 * Remove a client of the connected list
+	 * 
+	 * @param client the login to remove
+	 */
 	public void remove(String client) {
 		clients.remove(client);
 	}

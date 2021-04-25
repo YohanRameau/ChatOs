@@ -10,8 +10,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -20,24 +20,37 @@ import java.util.logging.Logger;
 import fr.uge.chatos.context.ClientContext;
 import fr.uge.chatos.context.Context;
 import fr.uge.chatos.context.PrivateClientContext;
-import fr.uge.chatos.core.BuildPacket;
+import fr.uge.chatos.observer.ConsoleObserver;
 
 public class Client {
 
-	static private Logger logger = Logger.getLogger(Client.class.getName());
-
+	static private final Logger logger = Logger.getLogger(Client.class.getName());
+	static private final String BANNER = "\n"
+			+ "───────────────────────────────────────────────────────────────────────────────────────────\n"
+			+ "─██████████████─██████──██████─██████████████─██████████████─██████████████─██████████████─\n"
+			+ "─██░░░░░░░░░░██─██░░██──██░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─██░░░░░░░░░░██─\n"
+			+ "─██░░██████████─██░░██──██░░██─██░░██████░░██─██████░░██████─██░░██████░░██─██░░██████████─\n"
+			+ "─██░░██─────────██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██──██░░██─██░░██─────────\n"
+			+ "─██░░██─────────██░░██████░░██─██░░██████░░██─────██░░██─────██░░██──██░░██─██░░██████████─\n"
+			+ "─██░░██─────────██░░░░░░░░░░██─██░░░░░░░░░░██─────██░░██─────██░░██──██░░██─██░░░░░░░░░░██─\n"
+			+ "─██░░██─────────██░░██████░░██─██░░██████░░██─────██░░██─────██░░██──██░░██─██████████░░██─\n"
+			+ "─██░░██─────────██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██──██░░██─────────██░░██─\n"
+			+ "─██░░██████████─██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░██████░░██─██████████░░██─\n"
+			+ "─██░░░░░░░░░░██─██░░██──██░░██─██░░██──██░░██─────██░░██─────██░░░░░░░░░░██─██░░░░░░░░░░██─\n"
+			+ "─██████████████─██████──██████─██████──██████─────██████─────██████████████─██████████████─\n"
+			+ "───────────────────────────────────────────────────────────────────────────────────────────";
 	private final SocketChannel sc;
 	private final Selector selector;
 	private final InetSocketAddress serverAddress;
 	private final String login;
 	private final Thread console;
+	private final HashSet<String> requesters = new HashSet<>();
 	private final ArrayBlockingQueue<String> commandQueue = new ArrayBlockingQueue<>(10);
 	private final Map<String, PrivateClientContext> privateConnectionMap = new HashMap<>();
 	private ClientContext mainContext;
 
-	enum MessageType {
-		PUBLIC_MESSAGE, PRIVATE_REQUEST, PRIVATE_MESSAGE, ACCEPT, REFUSE
-	}
+
+	
 
 	public Client(String login, InetSocketAddress serverAddress) throws IOException {
 		this.serverAddress = serverAddress;
@@ -49,6 +62,10 @@ public class Client {
 
 	//////////////////// CONSOLE THREAD ////////////////////
 
+	/**
+	 * Start the Console Thread
+	 */
+	
 	private void consoleRun() {
 		try {
 			var scan = new Scanner(System.in);
@@ -67,8 +84,8 @@ public class Client {
 	/**
 	 * Send a command to the selector via commandQueue and wake it up
 	 *
-	 * @param msg
-	 * @throws InterruptedException
+	 * @param msg to add to the client queue
+	 * @throws InterruptedException if the msg is impossible to add
 	 */
 
 	private void processStandardInput(String msg) throws InterruptedException {
@@ -77,155 +94,72 @@ public class Client {
 	}
 
 	//////////////////// Main Thread ////////////////////
-
+	
 	/**
-	 * Encode a public message into a ByteBuffer and transfer it on the server
-	 * context.
-	 * 
-	 * @param message
+	 * Add a requester to the private requester list
+	 *
+	 * @param login of the requester
+	 * @throws IllegalStateException if clients have the same login or the connection is already established
 	 */
-	private void sendPublicMessage(String message) {
-
-		var bb = BuildPacket.public_msg(login, message);
-		mainContext.queueMessage(bb);
+	public void addPrivateRequester(String login) {
+		if(this.login.equals(login)) {
+			throw new IllegalStateException("Two clients cannot have the same login.");
+		}
+		if(requesters.contains(login)) {
+			throw new IllegalStateException(login + " have already a private connection with you.");
+		}
+		requesters.add(login);
 	}
-
+	
 	/**
-	 * Encode a private message into a ByteBuffer and transfer it on the server
-	 * context
-	 * 
-	 * @param message
+	 * Remove a requester from the private requester list
+	 *
+	 * @param login of the requester
+	 * @throws IllegalStateException if clients have the same login or the connection is already established
 	 */
-	private void sendPrivateMessage(String input) {
-		String[] tokens = input.split(" ", 2);
-		if (tokens.length != 2) {
-			System.out.println(
-					"Parsing error: the input have a bad format. @login message for private message");
-			return;
+	public void removePrivateRequester(String login) {
+		if(this.login.equals(login)) {
+			throw new IllegalStateException("Two clients can not have the same login.");
 		}
-		if (tokens[0].equals(login)) {
-			// TODO CANNOT SEND A PRIVATE MESSAGE FOR HIMSELF.
-			System.out.println("You cannot send a private message for youself");
-			return;
+		if(!requesters.remove(login)) {
+			throw new IllegalStateException("You cannot remove an inexistant requester.");
 		}
-		var bb = BuildPacket.private_msg(login, tokens[0], tokens[1]);
-		mainContext.queueMessage(bb);
 	}
-
-	private void sendPrivateConnexionRequest(String input) {
-		String[] tokens = input.split(" ", 2);
-		if (tokens.length != 1 && tokens.length != 2) {
-			System.out.println(
-					"Parsing error: the input have a bad format. /login message for private connexion request");
-			return;
-		}
-		if (tokens.length == 2 && tokens[0].equals(login)) {
-			System.out.println("YOU CANNOT SEND A PRIVATE request FOR YOURSELF.");
-			return;
-		}
-		var bb = BuildPacket.request_co_private(login, tokens[0]);
-		mainContext.queueMessage(bb);
-	}
-
-	private void sendPrivateConnexionAcceptance(String input) {
-		String[] tokens = input.split(" ", 2);
-		var bb = BuildPacket.accept_co_private(login, tokens[1]);
-		mainContext.queueMessage(bb);
-	}
-
-	private void sendPrivateConnexionRefusal(String input) {
-		String[] tokens = input.split(" ", 2);
-		var bb = BuildPacket.refuse_co_private(login, tokens[1]);
-		mainContext.queueMessage(bb);
-	}
-
-	public void initializePrivateConnection(long id) throws IOException {
+	
+	/**
+	 * Initialize a private connection
+	 * 
+	 * @param id received by the server
+	 * @param receiver of the new connection
+	 * @throws IOException in case of bad connection address
+	 */
+	public void initializePrivateConnection(long id, String receiver) throws IOException {
 		SocketChannel privateSc = SocketChannel.open();
 		privateSc.configureBlocking(false);
 		var key = privateSc.register(selector, SelectionKey.OP_CONNECT);
-		var ctx = new PrivateClientContext(key, login + 1, this, id);
+		var ctx = new PrivateClientContext(key, receiver, this, id);
 		key.attach(ctx);
 		privateSc.connect(serverAddress);
+		privateConnectionMap.put(receiver, ctx);
 	}
 	
-	public void registerLogin(String login, PrivateClientContext ctx){
-		privateConnectionMap.put(login, ctx);
-	}
-
 	/**
-	 * Parse an input to determinate the type of packet. content.
-	 * 
-	 * @param msg
+	 * Launch the client
 	 */
-	private MessageType parseStandardInput(String msg) {
-		Objects.requireNonNull(msg);
-		if (msg.length() > 0) {
-			switch (msg.charAt(0)) {
-			case '@':
-				return MessageType.PRIVATE_MESSAGE;
-			case '/':
-				return MessageType.PRIVATE_REQUEST;
-			case '\\':
-				String[] tokens = msg.split(" ", 2);
-				if (tokens.length != 2) {
-					throw new IllegalStateException("Parsing error");
-				}
-				switch (tokens[0].toLowerCase()) {
-				case "\\yes":
-					return MessageType.ACCEPT;
-				case "\\no":
-					return MessageType.REFUSE;
-				default:
-					return MessageType.REFUSE;
-				}
-			default:
-				return MessageType.PUBLIC_MESSAGE;
-			}
-		}
-		return MessageType.PUBLIC_MESSAGE;
-	}
-
-	/**
-	 * Determinate and process the command receive on the commandQueue by the
-	 * Console Thread. The command can be a public message, a private message or a
-	 * private connection request.
-	 */
-	private void processCommands() {
-		if (commandQueue.isEmpty()) {
-			return;
-		}
-		String msg = commandQueue.remove();
-		switch (parseStandardInput(msg)) {
-		case PUBLIC_MESSAGE:
-			sendPublicMessage(msg);
-			break;
-		case PRIVATE_MESSAGE:
-			sendPrivateMessage(msg.substring(1));
-			break;
-		case PRIVATE_REQUEST:
-			sendPrivateConnexionRequest(msg.substring(1));
-			break;
-		case ACCEPT:
-			sendPrivateConnexionAcceptance(msg.substring(1));
-			break;
-		case REFUSE:
-			sendPrivateConnexionRefusal(msg.substring(1));
-			break;
-		}
-	}
-
 	public void launch() throws IOException {
+		System.out.println(BANNER);
 		sc.configureBlocking(false);
 		var key = sc.register(selector, SelectionKey.OP_CONNECT);
 		mainContext = new ClientContext(key, login, this);
 		key.attach(mainContext);
 		sc.connect(serverAddress);
 		console.start();
+		ConsoleObserver observer = new ConsoleObserver(this, login, requesters, mainContext, privateConnectionMap, commandQueue);
 		while (!Thread.interrupted()) {
 			// printKeys();
 			try {
 				selector.select(this::treatKey);
-				processCommands();
+				observer.observe();
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
@@ -314,6 +248,10 @@ public class Client {
 			list.add("WRITE");
 		return String.join(" and ", list);
 	}
+	
+	
+	
+/////////////////////////////////////////      MAIN      ////////////////////////////////////////////	
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 3) {
