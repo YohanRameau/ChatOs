@@ -11,11 +11,17 @@ public class LimitedQueue<E> extends LinkedList<E> {
         this.limit = limit;
     }
 
+    /**
+	 * Attempt to add an object to the queue
+	 * 
+	 * @param o The object to be added
+	 * @return True if the object has been added, else false
+	 */
     @Override
     public boolean add(E o) {
         boolean added = super.add(o);
         while (added && size() > limit) {
-           super.remove();
+           return false;
         }
         return added;
     }

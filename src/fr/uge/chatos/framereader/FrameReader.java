@@ -43,6 +43,12 @@ public class FrameReader implements Reader<Frame> {
 		rcsr = new RequestCoServerReader(clientList);
 	}
 	
+	/**
+	 * Call actions according to the opcode received
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param b The opcode received
+	 */
 	private ProcessStatus parsePacket(ByteBuffer bb, byte b) {
 		PacketTypes opcode = PacketTypes.values()[b];
 		switch (opcode) {
@@ -78,12 +84,17 @@ public class FrameReader implements Reader<Frame> {
 		}
 	}
 
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		 if (state == State.WAITING_BYTE) {
 	            switch (br.process(bb)) {
 	            case DONE:
-	            	System.out.println(state);
 	                opCode = br.get();
 	                state = State.WAITING_FRAME;
 	                break;
@@ -99,7 +110,12 @@ public class FrameReader implements Reader<Frame> {
 		 return parsePacket(bb, opCode);
 	}	
 
-	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public Frame get() {
 		PacketTypes opcode = PacketTypes.values()[opCode];

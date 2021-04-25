@@ -112,7 +112,6 @@ public class Client {
 	 * @throws IllegalStateException if clients have the same login or the connection is already established
 	 */
 	public void removePrivateRequester(String login) {
-		System.out.println(requesters);
 		if(this.login.equals(login)) {
 			throw new IllegalStateException("Two clients can not have the same login.");
 		}
@@ -146,7 +145,6 @@ public class Client {
 			return;
 		}
 		if (tokens[0].equals(login)) {
-			// TODO CANNOT SEND A PRIVATE MESSAGE FOR HIMSELF.
 			System.out.println("You cannot send a private message for youself");
 			return;
 		}

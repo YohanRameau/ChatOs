@@ -13,6 +13,14 @@ public class RefusalCoPrivateReader implements Reader<Refusal_co_private>{
 	private String sender;
 	private String receiver;
 	
+	/**
+	 * Read any string found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param waitingState The state the reader is on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
 			throw new IllegalStateException();
@@ -30,6 +38,13 @@ public class RefusalCoPrivateReader implements Reader<Refusal_co_private>{
 		}
 	}
 	
+	/**
+	 * Read the sender found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getSender(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_SENDER) {
 			throw new IllegalStateException();
@@ -47,6 +62,13 @@ public class RefusalCoPrivateReader implements Reader<Refusal_co_private>{
 		}
 	}
 
+	/**
+	 * Read the receiver found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getReceiver(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_RECEIVER) {
 			throw new IllegalStateException();
@@ -64,27 +86,14 @@ public class RefusalCoPrivateReader implements Reader<Refusal_co_private>{
 		}
 	}
 	
-//	private ProcessStatus getRequestConnexion(ByteBuffer bb) {
-//		if (state == State.DONE || state == State.ERROR) {
-//			throw new IllegalStateException();
-//		}
-//
-//		// SENDER
-//		if (state == State.WAITING_SENDER) {
-//			getSender(bb, State.WAITING_RECEIVER);
-//		}
-//
-//		// RECEIVER
-//		if (state == State.WAITING_RECEIVER) {
-//			return getReceiver(bb, State.DONE);
-//		}
-//		return ProcessStatus.ERROR;
-//
-//	}
-	
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
-		System.out.println("REQUEST REFUSAL CO PRIVATE");
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalStateException();
 		}
@@ -101,6 +110,12 @@ public class RefusalCoPrivateReader implements Reader<Refusal_co_private>{
 		return ProcessStatus.REFILL;
 	}
 	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public Refusal_co_private get() {
 		if(state != State.DONE) {

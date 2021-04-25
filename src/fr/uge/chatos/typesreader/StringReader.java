@@ -13,6 +13,12 @@ public class StringReader implements Reader<String> {
     private int size;
     private String value;
 
+    /**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
     @Override
     public ProcessStatus process(ByteBuffer bb) {
         if (state == State.DONE || state == State.ERROR) {
@@ -62,6 +68,12 @@ public class StringReader implements Reader<String> {
         return ProcessStatus.DONE;
     }
 
+    /**
+	 * Get the readed string
+	 * 
+	 * @throws IllegalStateException
+	 * @return The String
+	 */
     @Override
     public String get() {
         if (state != State.DONE) {

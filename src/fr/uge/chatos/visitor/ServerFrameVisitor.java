@@ -64,9 +64,7 @@ public class ServerFrameVisitor implements FrameVisitor{
 			ctx.silentlyClose();
 			return;
 		}
-//		this.pctx = new ServerContextPrivate(server, key);
 		var establishedPck = new Established_private();
-//		server.switchKey(key, pctx);
 		ctx.queueMessage(establishedPck);
 	}
 
@@ -79,7 +77,6 @@ public class ServerFrameVisitor implements FrameVisitor{
 	@Override
 	public void visit(Public_msg pck) {
 		closeIfNotPublicConnection();
-		System.out.println("Visit server visitor " + pck.getSender() + " " + pck.getMessage());
 		server.broadcast(pck);		
 	}
 

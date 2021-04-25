@@ -22,6 +22,12 @@ public class MessageReader implements Reader<MessageReader.Message> {
         }
     }
 
+    /**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
     @Override
     public ProcessStatus process(ByteBuffer bb) {
         if (state == State.DONE || state == State.ERROR) {
@@ -60,6 +66,12 @@ public class MessageReader implements Reader<MessageReader.Message> {
         return ProcessStatus.DONE;
     }
 
+    /**
+	 * Get the readed message
+	 * 
+	 * @throws IllegalStateException
+	 * @return The Message
+	 */
     @Override
     public Message get() {
         if (state != State.DONE) {

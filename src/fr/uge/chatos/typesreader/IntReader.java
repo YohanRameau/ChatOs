@@ -12,6 +12,12 @@ public class IntReader implements Reader<Integer> {
     private final ByteBuffer internalbb = ByteBuffer.allocate(Integer.BYTES); // write-mode
     private int value;
 
+    /**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
     @Override
     public ProcessStatus process(ByteBuffer bb) {
         if (state== State.DONE || state== State.ERROR) {
@@ -39,6 +45,12 @@ public class IntReader implements Reader<Integer> {
         return ProcessStatus.DONE;
     }
 
+    /**
+	 * Get the readed integer
+	 * 
+	 * @throws IllegalStateException
+	 * @return The Integer
+	 */
     @Override
     public Integer get() {
         if (state!= State.DONE) {

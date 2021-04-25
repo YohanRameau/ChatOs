@@ -22,6 +22,7 @@ import fr.uge.chatos.frametypes.SendToOne;
 public class Server {
 
 	public static class PrivateConnectionsInformations {
+		@SuppressWarnings("unused")
 		private final long id;
 		private ServerContext firstContext = null;
 		private ServerContext secondContext = null;
@@ -49,8 +50,6 @@ public class Server {
 		private Optional<ServerContext> getOtherContext(ServerContext sctx) {
 			ServerContext result = null;
 			
-			System.out.println("parameter : " + sctx + " ctx 1 : " + firstContext + " ctx 2 : " + secondContext);
-			
 			if(sctx == firstContext) {
 				result = secondContext;
 			} else if (sctx == secondContext ) {
@@ -60,15 +59,8 @@ public class Server {
 		}
 		
 		public void edgeSending(ServerContext context, Frame frame) {
-			// TODO Retrouver le privateClientInfo à partir de l'id
-			// Determiner lequel des deux context et le sender et lequel est le receiver (context == privatecontextinfo.context1 ou 2)
-			// mettre la frame dans le queue message du context receiver
-			// ne pas oublier les vérifications (est ce que context est l'un des deux context ?)
-			
-			System.out.println("EDGE SENDING");
 			var optional_ctx = getOtherContext(context);
 			if(optional_ctx.isEmpty()) {
-				// Usurpation connection
 				context.silentlyClose();
 			} 
 			var other_ctx = optional_ctx.get();
@@ -107,9 +99,6 @@ public class Server {
 		}
 	}
 	
-	// TODO ClientPrivateInfo -> Pas mal de méthode peut etre faudra creer une classe
-
-	
 	public long generateId() {
 		return privateConnectionCompt.getAndIncrement();
 	}
@@ -125,16 +114,6 @@ public class Server {
 	}
 	
 	public boolean registerPrivateConnection(long id, ServerContext ctx) {
-		// TODO Trouver les deux context (context1 et context2) en fonctions des deux logins
-	    // creer un nouvel objet PrivateConnectionInfo à partir des deux ocntext et de l'id
-	
-//		var tmp1 = clientList.getClient(sender);
-//		var tmp2 = clientList.getClient(receiver);
-//		
-//		if(tmp1.isEmpty() || tmp2.isEmpty()) {
-//			return false;
-//		}
-		
 		var clientInfo = privateConnectionMap.get(id);
 		if(clientInfo == null) {
 			ctx.silentlyClose();
@@ -234,19 +213,6 @@ public class Server {
 		}
 		optionalClient.get().queueMessage(pck);
 		return true;
-		
-//		if (clientList.isPresent(pck.getReceiver())) {
-//			for (var key : selector.keys()) {
-//				var context = (ServerContext) key.attachment();
-//				if (context == null)
-//					continue;
-//				if (context.isClient(pck.getReceiver())) {
-//					context.queueMessage(pck);
-//					return true;
-//				}
-//			}
-//		}
-//		return false;
 	}
 	
 	public boolean privateConnectionInit(ServerContext senderContext, SendToOne packet) {
@@ -264,31 +230,8 @@ public class Server {
 			receiverContext.queueMessage(packet);
 			return true;
 		}
-		// TODO ENVOYER MESSAGE DEJA CONNECTER
 		return true;
-		
-		
-//		if (clientList.isPresent(packet.getReceiver())) {
-//			for (var key : selector.keys()) {
-//				var context = (ServerContext) key.attachment();
-//				if (context == null)
-//					continue;
-//				if (context.isClient(packet.getReceiver()) && context.addRequester(packet.getSender())) {
-//					context.queueMessage(packet);
-//					return true;
-//				}
-//				if (context.isClient(packet.getReceiver()) && !context.addRequester(packet.getSender())){
-//					// TODO
-//					// Envoyer message d'erreur parce que déjà demandé ou ignorer la demande 
-//					return true;
-//				}
-//			}
-//		}
-//		return false;
 	}
-
-	// Ajout d'une méthode unicast-like pour envoyer des réponses uniquement aux
-	// interessés
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 1) {

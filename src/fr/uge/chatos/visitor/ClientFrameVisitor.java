@@ -69,7 +69,7 @@ public class ClientFrameVisitor implements FrameVisitor{
 		try {
 			client.initializePrivateConnection(pck.getId(), pck.getSender());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+
 		}
 	}; 
 	

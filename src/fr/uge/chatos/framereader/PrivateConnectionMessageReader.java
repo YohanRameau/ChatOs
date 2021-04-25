@@ -15,7 +15,14 @@ public class PrivateConnectionMessageReader implements Reader<PrivateConnectionM
 	private String message;
 	private long id;
 	
-	
+	/**
+	 * Read any string found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param waitingState The state the reader is on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getString(ByteBuffer bb, State waitingState, State successState) {
 		if (state != waitingState) {
 			throw new IllegalStateException();
@@ -33,6 +40,13 @@ public class PrivateConnectionMessageReader implements Reader<PrivateConnectionM
 		}
 	}
 	
+	/**
+	 * Read any message found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @param successState The state the reader will be after the process
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getMessage(ByteBuffer bb, State successState) {
 		if (state != State.WAITING_MSG) {
 			throw new IllegalStateException();
@@ -50,6 +64,12 @@ public class PrivateConnectionMessageReader implements Reader<PrivateConnectionM
 		}
 	}
 	
+	/**
+	 * Read any id found on the ByteBuffer
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @throws IllegalStateException
+	 */
 	private ProcessStatus getId(ByteBuffer bb, State successState) {
 		if(state != State.WAITING_ID) {
 			throw new IllegalStateException();
@@ -67,6 +87,12 @@ public class PrivateConnectionMessageReader implements Reader<PrivateConnectionM
 		}
 	}
 	
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
@@ -86,6 +112,12 @@ public class PrivateConnectionMessageReader implements Reader<PrivateConnectionM
 		return ProcessStatus.REFILL;
 	}
 	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public PrivateConnectionMessage get() {
 		if(state != State.DONE) {

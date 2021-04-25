@@ -22,33 +22,12 @@ public class RequestCoServerReader implements Reader<Request_co_server>{
 		this.clientList = new ClientList();
 	}
 	
-//	private ProcessStatus getIdentification(ByteBuffer bb) {
-//		if (state == State.DONE || state == State.ERROR) {
-//			throw new IllegalStateException();
-//		}
-//
-//		// SENDER
-//		switch (sr.process(bb)) {
-//		case DONE:
-//			sender = sr.get();
-//			if (clientList.isPresent(sender)) {
-//				System.out.println("Name already taken or client already identified !");
-//				sr.reset();
-//				state = State.ERROR;
-//				return ProcessStatus.ERROR;
-//			} else {
-//				sr.reset();
-//				state = State.DONE;
-//				return ProcessStatus.DONE;
-//			}
-//		case REFILL:
-//			return ProcessStatus.REFILL;
-//		default:
-//			state = State.ERROR;
-//			return ProcessStatus.ERROR;
-//		}
-//	}
-	
+	/**
+	 * Call actions in order to read every infos
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return ProcessStatus
+	 */
 	@Override
 	public ProcessStatus process(ByteBuffer bb) {
 		if (state == State.DONE || state == State.ERROR) {
@@ -77,6 +56,12 @@ public class RequestCoServerReader implements Reader<Request_co_server>{
 		}
 	}
 	
+	/**
+	 * Get the Frame
+	 * 
+	 * @param bb The ByteBuffer to read on
+	 * @return The frame
+	 */
 	@Override
 	public Request_co_server get() {
 		if(state != State.DONE) {
